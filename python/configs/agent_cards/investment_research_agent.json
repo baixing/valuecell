@@ -1,7 +1,7 @@
 {
     "name": "ResearchAgent",
     "display_name": "Research Agent",
-    "url": "http://localhost:10004/",
+    "url": "http://127.0.0.1:10004/",
     "description": "Research Agent analyzes SEC filings (10-K, 10-Q, 13F, 8-K) and internal knowledge to produce sourceable, actionable summaries and data extracts. It can extract financial line items, reconcile filings with knowledge search results, summarize holdings from 13F filings, and recommend follow-ups with exact tool calls.",
     "skills": [
         {

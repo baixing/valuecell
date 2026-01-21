@@ -1,10 +1,9 @@
-import asyncio
-import sqlite3
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import aiosqlite
+from psycopg2.extras import RealDictCursor
+from psycopg2 import pool
 
 from .models import Conversation
 
@@ -18,25 +17,25 @@ class ConversationStore(ABC):
     """
 
     @abstractmethod
-    async def save_conversation(self, conversation: Conversation) -> None:
+    def save_conversation(self, conversation: Conversation) -> None:
         """Save conversation"""
 
     @abstractmethod
-    async def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
+    def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
         """Load conversation"""
 
     @abstractmethod
-    async def delete_conversation(self, conversation_id: str) -> bool:
+    def delete_conversation(self, conversation_id: str) -> bool:
         """Delete conversation"""
 
     @abstractmethod
-    async def list_conversations(
+    def list_conversations(
         self, user_id: Optional[str] = None, limit: int = 100, offset: int = 0
     ) -> List[Conversation]:
         """List conversations. If user_id is None, return all conversations."""
 
     @abstractmethod
-    async def conversation_exists(self, conversation_id: str) -> bool:
+    def conversation_exists(self, conversation_id: str) -> bool:
         """Check if conversation exists"""
 
 
@@ -49,22 +48,22 @@ class InMemoryConversationStore(ConversationStore):
     def __init__(self):
         self._conversations: Dict[str, Conversation] = {}
 
-    async def save_conversation(self, conversation: Conversation) -> None:
+    def save_conversation(self, conversation: Conversation) -> None:
         """Save conversation to memory"""
         self._conversations[conversation.conversation_id] = conversation
 
-    async def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
+    def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
         """Load conversation from memory"""
         return self._conversations.get(conversation_id)
 
-    async def delete_conversation(self, conversation_id: str) -> bool:
+    def delete_conversation(self, conversation_id: str) -> bool:
         """Delete conversation from memory"""
         if conversation_id in self._conversations:
             del self._conversations[conversation_id]
             return True
         return False
 
-    async def list_conversations(
+    def list_conversations(
         self, user_id: Optional[str] = None, limit: int = 100, offset: int = 0
     ) -> List[Conversation]:
         """List conversations. If user_id is None, return all conversations."""
@@ -87,7 +86,7 @@ class InMemoryConversationStore(ConversationStore):
         end = offset + limit
         return conversations[start:end]
 
-    async def conversation_exists(self, conversation_id: str) -> bool:
+    def conversation_exists(self, conversation_id: str) -> bool:
         """Check if conversation exists"""
         return conversation_id in self._conversations
 
@@ -100,140 +99,153 @@ class InMemoryConversationStore(ConversationStore):
         return len(self._conversations)
 
 
-class SQLiteConversationStore(ConversationStore):
-    """SQLite-backed conversation store using aiosqlite for true async I/O.
+class PostgresConversationStore(ConversationStore):
+    """PostgreSQL-backed conversation store using psycopg2.
 
-    Lazily initializes the database schema on first use. Uses aiosqlite to
-    perform non-blocking DB operations and converts rows to Conversation
-    instances.
+    Uses psycopg2 with connection pooling for database operations.
+    Table schema is created via init_db.py migration scripts.
     """
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._initialized = False
-        self._init_lock = None  # lazy to avoid loop-binding in __init__
+    def __init__(self, dsn: str):
+        """Initialize PostgreSQL conversation store.
 
-    async def _ensure_initialized(self):
-        """Ensure database is initialized with proper schema."""
-        if self._initialized:
-            return
+        Args:
+            dsn: PostgreSQL connection string (e.g., postgresql://user:pass@host:5432/dbname)
+        """
+        self.dsn = dsn
+        self._pool = None
 
-        if self._init_lock is None:
-            self._init_lock = asyncio.Lock()
-
-        async with self._init_lock:
-            if self._initialized:
-                return
-
-            async with aiosqlite.connect(self.db_path) as db:
-                await db.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS conversations (
-                        conversation_id TEXT PRIMARY KEY,
-                        user_id TEXT NOT NULL,
-                        title TEXT,
-                        agent_name TEXT,
-                        created_at TEXT NOT NULL,
-                        updated_at TEXT NOT NULL,
-                        status TEXT NOT NULL DEFAULT 'active'
-                    )
-                    """
-                )
-                await db.commit()
-
-            self._initialized = True
+    def _get_pool(self):
+        """Get or create connection pool."""
+        if self._pool is None:
+            self._pool = pool.ThreadedConnectionPool(
+                minconn=1,
+                maxconn=10,
+                dsn=self.dsn
+            )
+        return self._pool
 
     @staticmethod
-    def _row_to_conversation(row: sqlite3.Row) -> Conversation:
+    def _row_to_conversation(row: dict) -> Conversation:
         """Convert database row to Conversation object."""
         return Conversation(
             conversation_id=row["conversation_id"],
             user_id=row["user_id"],
             title=row["title"],
             agent_name=row["agent_name"],
-            created_at=datetime.fromisoformat(row["created_at"]),
-            updated_at=datetime.fromisoformat(row["updated_at"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
             status=row["status"],
         )
 
-    async def save_conversation(self, conversation: Conversation) -> None:
-        """Save conversation to SQLite database."""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
-            await db.execute(
-                """
-                INSERT OR REPLACE INTO conversations (
-                    conversation_id, user_id, title, agent_name, created_at, updated_at, status
-                ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """,
-                (
-                    conversation.conversation_id,
-                    conversation.user_id,
-                    conversation.title,
-                    conversation.agent_name,
-                    conversation.created_at.isoformat(),
-                    conversation.updated_at.isoformat(),
-                    conversation.status.value
-                    if hasattr(conversation.status, "value")
-                    else str(conversation.status),
-                ),
-            )
-            await db.commit()
+    def save_conversation(self, conversation: Conversation) -> None:
+        """Save conversation to PostgreSQL database."""
+        pool = self._get_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO conversations (
+                        conversation_id, user_id, title, agent_name, created_at, updated_at, status
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (conversation_id) DO UPDATE SET
+                        user_id = EXCLUDED.user_id,
+                        title = EXCLUDED.title,
+                        agent_name = EXCLUDED.agent_name,
+                        created_at = EXCLUDED.created_at,
+                        updated_at = EXCLUDED.updated_at,
+                        status = EXCLUDED.status
+                    """,
+                    (
+                        conversation.conversation_id,
+                        conversation.user_id,
+                        conversation.title,
+                        conversation.agent_name,
+                        conversation.created_at,
+                        conversation.updated_at,
+                        conversation.status.value
+                        if hasattr(conversation.status, "value")
+                        else str(conversation.status),
+                    ),
+                )
+                conn.commit()
+        finally:
+            pool.putconn(conn)
 
-    async def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
-        """Load conversation from SQLite database."""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
-            db.row_factory = sqlite3.Row
-            cur = await db.execute(
-                "SELECT * FROM conversations WHERE conversation_id = ?",
-                (conversation_id,),
-            )
-            row = await cur.fetchone()
-            return self._row_to_conversation(row) if row else None
+    def load_conversation(self, conversation_id: str) -> Optional[Conversation]:
+        """Load conversation from PostgreSQL database."""
+        pool = self._get_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(
+                    "SELECT * FROM conversations WHERE conversation_id = %s",
+                    (conversation_id,),
+                )
+                row = cur.fetchone()
+                return self._row_to_conversation(dict(row)) if row else None
+        finally:
+            pool.putconn(conn)
 
-    async def delete_conversation(self, conversation_id: str) -> bool:
-        """Delete conversation from SQLite database."""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
-            cur = await db.execute(
-                "DELETE FROM conversations WHERE conversation_id = ?",
-                (conversation_id,),
-            )
-            await db.commit()
-            return cur.rowcount > 0
+    def delete_conversation(self, conversation_id: str) -> bool:
+        """Delete conversation from PostgreSQL database."""
+        pool = self._get_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM conversations WHERE conversation_id = %s",
+                    (conversation_id,),
+                )
+                conn.commit()
+                return cur.rowcount > 0
+        finally:
+            pool.putconn(conn)
 
-    async def list_conversations(
+    def list_conversations(
         self, user_id: Optional[str] = None, limit: int = 100, offset: int = 0
     ) -> List[Conversation]:
-        """List conversations from SQLite database."""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
-            db.row_factory = sqlite3.Row
+        """List conversations from PostgreSQL database."""
+        pool = self._get_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                if user_id is None:
+                    # Return all conversations
+                    cur.execute(
+                        "SELECT * FROM conversations ORDER BY created_at DESC LIMIT %s OFFSET %s",
+                        (limit, offset),
+                    )
+                else:
+                    # Filter by user_id
+                    cur.execute(
+                        "SELECT * FROM conversations WHERE user_id = %s ORDER BY created_at DESC LIMIT %s OFFSET %s",
+                        (user_id, limit, offset),
+                    )
 
-            if user_id is None:
-                # Return all conversations
-                cur = await db.execute(
-                    "SELECT * FROM conversations ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                    (limit, offset),
+                rows = cur.fetchall()
+                return [self._row_to_conversation(dict(row)) for row in rows]
+        finally:
+            pool.putconn(conn)
+
+    def conversation_exists(self, conversation_id: str) -> bool:
+        """Check if conversation exists in PostgreSQL database."""
+        pool = self._get_pool()
+        conn = pool.getconn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT 1 FROM conversations WHERE conversation_id = %s",
+                    (conversation_id,),
                 )
-            else:
-                # Filter by user_id
-                cur = await db.execute(
-                    "SELECT * FROM conversations WHERE user_id = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
-                    (user_id, limit, offset),
-                )
+                row = cur.fetchone()
+                return row is not None
+        finally:
+            pool.putconn(conn)
 
-            rows = await cur.fetchall()
-            return [self._row_to_conversation(row) for row in rows]
-
-    async def conversation_exists(self, conversation_id: str) -> bool:
-        """Check if conversation exists in SQLite database."""
-        await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
-            cur = await db.execute(
-                "SELECT 1 FROM conversations WHERE conversation_id = ?",
-                (conversation_id,),
-            )
-            row = await cur.fetchone()
-            return row is not None
+    def close(self):
+        """Close the connection pool."""
+        if self._pool:
+            self._pool.closeall()
+            self._pool = None

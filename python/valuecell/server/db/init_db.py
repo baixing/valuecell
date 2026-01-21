@@ -92,7 +92,7 @@ class DatabaseInitializer:
             return False
 
     def create_database_file(self) -> bool:
-        """Create database file (for SQLite)."""
+        """Create database file (for SQLite). Not needed for PostgreSQL."""
         database_url = self.settings.DATABASE_URL
 
         if database_url.startswith("sqlite:///"):
@@ -133,7 +133,8 @@ class DatabaseInitializer:
                 logger.error(f"Error creating database file: {e}")
                 return False
 
-        logger.info("Database file creation not needed for non-SQLite databases")
+        # For PostgreSQL, the database server handles file management
+        logger.info("Database file creation not needed for PostgreSQL")
         return True
 
     def create_tables(self) -> bool:
@@ -181,9 +182,9 @@ class DatabaseInitializer:
                 # Create index for conversation_items
                 conn.execute(
                     text("""
-                    CREATE INDEX IF NOT EXISTS idx_item_conv_time 
+                    CREATE INDEX IF NOT EXISTS idx_item_conv_time
                     ON conversation_items(conversation_id, created_at)
-                """)
+                    """)
                 )
 
                 # Create tasks table for task management
@@ -213,19 +214,19 @@ class DatabaseInitializer:
                 # Indexes for common task queries
                 conn.execute(
                     text("""
-                    CREATE INDEX IF NOT EXISTS idx_tasks_conversation 
+                    CREATE INDEX IF NOT EXISTS idx_tasks_conversation
                     ON tasks(conversation_id)
                     """)
                 )
                 conn.execute(
                     text("""
-                    CREATE INDEX IF NOT EXISTS idx_tasks_user 
+                    CREATE INDEX IF NOT EXISTS idx_tasks_user
                     ON tasks(user_id)
                     """)
                 )
                 conn.execute(
                     text("""
-                    CREATE INDEX IF NOT EXISTS idx_tasks_status 
+                    CREATE INDEX IF NOT EXISTS idx_tasks_status
                     ON tasks(status)
                     """)
                 )

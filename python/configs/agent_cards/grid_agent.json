@@ -1,7 +1,7 @@
 {
   "name": "GridStrategyAgent",
   "display_name": "Grid Strategy Agent",
-  "url": "http://localhost:10007/",
+  "url": "http://127.0.0.1:10007/",
   "description": "LLM-driven strategy composer that turns market features into normalized trade instructions. Includes a simple runtime for demo and testing.",
   "capabilities": {
     "streaming": true,

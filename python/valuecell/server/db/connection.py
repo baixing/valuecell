@@ -4,7 +4,6 @@ from typing import Generator
 
 from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
-from sqlalchemy.pool import StaticPool
 
 from ..config.settings import get_settings
 from .models.base import Base
@@ -24,20 +23,10 @@ class DatabaseManager:
         """Initialize database engine."""
         database_config = self.settings.get_database_config()
 
-        # SQLite specific configuration
-        connect_args = {}
-        if database_config["url"].startswith("sqlite"):
-            connect_args = {
-                "check_same_thread": False,
-                "timeout": 20,
-            }
-
         self.engine = create_engine(
             database_config["url"],
-            connect_args=connect_args,
-            poolclass=StaticPool
-            if database_config["url"].startswith("sqlite")
-            else None,
+            # PostgreSQL: use default connection pool
+            # SQLite: use in-memory for testing only
         )
 
         self.SessionLocal = sessionmaker(

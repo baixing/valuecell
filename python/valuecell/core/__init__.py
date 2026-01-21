@@ -7,15 +7,16 @@ from .conversation import (
     ConversationStatus,
     ConversationStore,
     InMemoryConversationStore,
+    PostgresConversationStore,
 )
 from .conversation.item_store import (
     InMemoryItemStore,
     ItemStore,
-    SQLiteItemStore,
+    PostgresItemStore,
 )
 
 # Task management
-from .task import Task, TaskManager, TaskStatus
+from .task import PostgresTaskStore, Task, TaskManager, TaskStatus
 
 # Type system
 from .types import (
@@ -33,13 +34,15 @@ __all__ = [
     "ConversationManager",
     "ConversationStore",
     "InMemoryConversationStore",
+    "PostgresConversationStore",
     "ItemStore",
     "InMemoryItemStore",
-    "SQLiteItemStore",
+    "PostgresItemStore",
     # Task exports
     "Task",
     "TaskStatus",
     "TaskManager",
+    "PostgresTaskStore",
     # Type system exports
     "UserInput",
     "UserInputMetadata",

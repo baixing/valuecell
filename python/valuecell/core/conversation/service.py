@@ -34,7 +34,7 @@ class ConversationService:
     ) -> Tuple[Conversation, bool]:
         """Return the conversation, creating it if it does not exist."""
 
-        conversation = await self._manager.get_conversation(conversation_id)
+        conversation = self._manager.get_conversation(conversation_id)
         created = False
         if conversation is None:
             conversation = await self._manager.create_conversation(
@@ -47,10 +47,10 @@ class ConversationService:
         return conversation, created
 
     async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
-        return await self._manager.get_conversation(conversation_id)
+        return self._manager.get_conversation(conversation_id)
 
     async def activate(self, conversation_id: str) -> bool:
-        conversation = await self._manager.get_conversation(conversation_id)
+        conversation = self._manager.get_conversation(conversation_id)
         if not conversation:
             return False
         conversation.activate()
@@ -58,7 +58,7 @@ class ConversationService:
         return True
 
     async def require_user_input(self, conversation_id: str) -> bool:
-        conversation = await self._manager.get_conversation(conversation_id)
+        conversation = self._manager.get_conversation(conversation_id)
         if not conversation:
             return False
         conversation.require_user_input()
@@ -68,7 +68,7 @@ class ConversationService:
     async def set_status(
         self, conversation_id: str, status: ConversationStatus
     ) -> bool:
-        conversation = await self._manager.get_conversation(conversation_id)
+        conversation = self._manager.get_conversation(conversation_id)
         if not conversation:
             return False
         conversation.set_status(status)
@@ -114,7 +114,7 @@ class ConversationService:
             metadata=metadata,
         )
 
-    async def get_conversation_items(
+    def get_conversation_items(
         self,
         conversation_id: Optional[str] = None,
         event: Optional[ConversationItemEvent] = None,
@@ -132,7 +132,7 @@ class ConversationService:
             offset: Number of items to skip (optional, default: 0)
         """
 
-        return await self._manager.get_conversation_items(
+        return self._manager.get_conversation_items(
             conversation_id=conversation_id,
             event=event,
             component_type=component_type,

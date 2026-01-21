@@ -49,35 +49,35 @@ class ConversationManager:
             title=title,
             agent_name=agent_name,
         )
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
         return conversation
 
-    async def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
+    def get_conversation(self, conversation_id: str) -> Optional[Conversation]:
         """Get conversation metadata"""
-        return await self.conversation_store.load_conversation(conversation_id)
+        return self.conversation_store.load_conversation(conversation_id)
 
     async def update_conversation(self, conversation: Conversation) -> None:
         """Update conversation metadata"""
         conversation.updated_at = datetime.now()
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
 
     async def delete_conversation(self, conversation_id: str) -> bool:
         """Delete conversation and all its items"""
         # First delete all items for this conversation
-        await self.item_store.delete_conversation_items(conversation_id)
+        self.item_store.delete_conversation_items(conversation_id)
 
         # Then delete the conversation metadata
-        return await self.conversation_store.delete_conversation(conversation_id)
+        return self.conversation_store.delete_conversation(conversation_id)
 
-    async def list_user_conversations(
+    def list_user_conversations(
         self, user_id: Optional[str] = None, limit: int = 100, offset: int = 0
     ) -> List[Conversation]:
         """List conversations. If user_id is None, return all conversations."""
-        return await self.conversation_store.list_conversations(user_id, limit, offset)
+        return self.conversation_store.list_conversations(user_id, limit, offset)
 
-    async def conversation_exists(self, conversation_id: str) -> bool:
+    def conversation_exists(self, conversation_id: str) -> bool:
         """Check if conversation exists"""
-        return await self.conversation_store.conversation_exists(conversation_id)
+        return self.conversation_store.conversation_exists(conversation_id)
 
     async def add_item(
         self,
@@ -105,7 +105,7 @@ class ConversationManager:
             metadata: Additional metadata as dict (optional)
         """
         # Verify conversation exists
-        conversation = await self.get_conversation(conversation_id)
+        conversation = self.get_conversation(conversation_id)
         if not conversation:
             return None
 
@@ -144,15 +144,15 @@ class ConversationManager:
         )
 
         # Save item directly to item store
-        await self.item_store.save_item(item)
+        self.item_store.save_item(item)
 
         # Update conversation timestamp
         conversation.touch()
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
 
         return item
 
-    async def get_conversation_items(
+    def get_conversation_items(
         self,
         conversation_id: Optional[str] = None,
         event: Optional[ConversationItemEvent] = None,
@@ -169,7 +169,7 @@ class ConversationManager:
             limit: Maximum number of items to return (optional, default: all)
             offset: Number of items to skip (optional, default: 0)
         """
-        return await self.item_store.get_items(
+        return self.item_store.get_items(
             conversation_id=conversation_id,
             event=event,
             component_type=component_type,
@@ -177,54 +177,54 @@ class ConversationManager:
             offset=offset or 0,
         )
 
-    async def get_latest_item(self, conversation_id: str) -> Optional[ConversationItem]:
+    def get_latest_item(self, conversation_id: str) -> Optional[ConversationItem]:
         """Get latest item in a conversation"""
-        return await self.item_store.get_latest_item(conversation_id)
+        return self.item_store.get_latest_item(conversation_id)
 
-    async def get_item(self, item_id: str) -> Optional[ConversationItem]:
+    def get_item(self, item_id: str) -> Optional[ConversationItem]:
         """Get a specific item by ID"""
-        return await self.item_store.get_item(item_id)
+        return self.item_store.get_item(item_id)
 
-    async def get_item_count(self, conversation_id: str) -> int:
+    def get_item_count(self, conversation_id: str) -> int:
         """Get total item count for a conversation"""
-        return await self.item_store.get_item_count(conversation_id)
+        return self.item_store.get_item_count(conversation_id)
 
-    async def get_items_by_role(
+    def get_items_by_role(
         self, conversation_id: str, role: Role
     ) -> List[ConversationItem]:
         """Get items filtered by role"""
-        return await self.item_store.get_items(conversation_id, role=role)
+        return self.item_store.get_items(conversation_id, role=role)
 
     async def deactivate_conversation(self, conversation_id: str) -> bool:
         """Deactivate conversation"""
-        conversation = await self.get_conversation(conversation_id)
+        conversation = self.get_conversation(conversation_id)
         if not conversation:
             return False
 
         conversation.deactivate()
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
         return True
 
     async def activate_conversation(self, conversation_id: str) -> bool:
         """Activate conversation"""
-        conversation = await self.get_conversation(conversation_id)
+        conversation = self.get_conversation(conversation_id)
         if not conversation:
             return False
 
         conversation.activate()
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
         return True
 
     async def set_conversation_status(
         self, conversation_id: str, status: ConversationStatus
     ) -> bool:
         """Set conversation status"""
-        conversation = await self.get_conversation(conversation_id)
+        conversation = self.get_conversation(conversation_id)
         if not conversation:
             return False
 
         conversation.set_status(status)
-        await self.conversation_store.save_conversation(conversation)
+        self.conversation_store.save_conversation(conversation)
         return True
 
     async def require_user_input(self, conversation_id: str) -> bool:
@@ -250,7 +250,7 @@ class ConversationManager:
             status: New task status value (e.g., 'failed').
             error_reason: Optional error details to store in metadata.
         """
-        items = await self.item_store.get_items(task_id=task_id)
+        items = self.item_store.get_items(task_id=task_id)
         for item in items:
             # Check if this is a scheduled_task_controller component
             if not item.payload:
@@ -280,13 +280,13 @@ class ConversationManager:
                     metadata_obj["error_reason"] = error_reason
                 item.metadata = json.dumps(metadata_obj, default=str)
 
-                await self.item_store.save_item(item)
+                self.item_store.save_item(item)
             except Exception as e:
                 logger.warning(
                     f"Failed to update task component status for task {task_id}: {e}"
                 )
 
-    async def get_conversations_by_status(
+    def get_conversations_by_status(
         self,
         user_id: str,
         status: ConversationStatus,
@@ -296,7 +296,7 @@ class ConversationManager:
         """Get user conversations filtered by status"""
         # Get all user conversations and filter by status
         # Note: This could be optimized by adding status filtering to the store interface
-        all_conversations = await self.conversation_store.list_conversations(
+        all_conversations = self.conversation_store.list_conversations(
             user_id, limit * 2, offset
         )
         return [

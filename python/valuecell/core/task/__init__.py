@@ -3,7 +3,7 @@
 from .executor import TaskExecutor
 from .manager import TaskManager
 from .models import Task, TaskPattern, TaskStatus
-from .task_store import InMemoryTaskStore, SQLiteTaskStore, TaskStore
+from .task_store import InMemoryTaskStore, PostgresTaskStore, TaskStore
 
 __all__ = [
     "Task",
@@ -13,5 +13,5 @@ __all__ = [
     "TaskExecutor",
     "TaskStore",
     "InMemoryTaskStore",
-    "SQLiteTaskStore",
+    "PostgresTaskStore",
 ]

@@ -47,7 +47,7 @@ class TaskService:
 
     async def get_task(self, task_id: str) -> Optional[Task]:
         """Get a task by ID."""
-        return await self._manager._get_task(task_id)
+        return self._manager._store.load_task(task_id)
 
     async def list_tasks(
         self,
@@ -58,7 +58,7 @@ class TaskService:
         offset: int = 0,
     ) -> List[Task]:
         """List tasks with optional filters."""
-        return await self._manager._store.list_tasks(
+        return self._manager._store.list_tasks(
             conversation_id=conversation_id,
             user_id=user_id,
             status=status,

@@ -35,6 +35,44 @@ def resolve_db_path() -> str:
     return os.path.join(get_system_env_dir(), "valuecell.db")
 
 
+def resolve_postgres_dsn() -> str:
+    """Resolve the PostgreSQL DSN for database connections.
+
+    Resolution order:
+    1) `VALUECELL_DATABASE_URL` env var (if starts with `postgresql://` or `postgres://`)
+    2) Build DSN from individual PostgreSQL environment variables
+
+    Environment variables:
+    - VALUECELL_DATABASE_URL: Full PostgreSQL connection string
+    - PGHOST, PGPORT, PGUSER, PGPASSWORD, PGDATABASE: Individual connection params
+
+    Returns:
+        PostgreSQL DSN string (e.g., postgresql://user:pass@host:5432/dbname)
+    """
+    # Check for full DSN first
+    db_url = os.environ.get("VALUECELL_DATABASE_URL")
+    if db_url and db_url.startswith("postgresql"):
+        return db_url
+
+    if db_url and db_url.startswith("postgres"):
+        # Convert postgres:// to postgresql://
+        return db_url.replace("postgres://", "postgresql://", 1)
+
+    # Build from individual environment variables
+    host = os.environ.get("PGHOST", "localhost")
+    port = os.environ.get("PGPORT", "5432")
+    user = os.environ.get("PGUSER", "postgres")
+    password = os.environ.get("PGPASSWORD", "")
+    database = os.environ.get("PGDATABASE", "valuecell")
+
+    if password:
+        dsn = f"postgresql://{user}:{password}@{host}:{port}/{database}"
+    else:
+        dsn = f"postgresql://{user}@{host}:{port}/{database}"
+
+    return dsn
+
+
 def resolve_lancedb_uri() -> str:
     """Resolve LanceDB directory path.
 

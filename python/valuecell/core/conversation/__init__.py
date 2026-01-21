@@ -3,9 +3,13 @@
 from .conversation_store import (
     ConversationStore,
     InMemoryConversationStore,
-    SQLiteConversationStore,
+    PostgresConversationStore,
 )
-from .item_store import InMemoryItemStore, ItemStore, SQLiteItemStore
+from .item_store import (
+    InMemoryItemStore,
+    ItemStore,
+    PostgresItemStore,
+)
 from .manager import ConversationManager
 from .models import Conversation, ConversationStatus
 from .service import ConversationService
@@ -20,9 +24,9 @@ __all__ = [
     # Conversation storage
     "ConversationStore",
     "InMemoryConversationStore",
-    "SQLiteConversationStore",
+    "PostgresConversationStore",
     # Item storage
     "ItemStore",
     "InMemoryItemStore",
-    "SQLiteItemStore",
+    "PostgresItemStore",
 ]

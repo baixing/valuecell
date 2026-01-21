@@ -1,11 +1,12 @@
 """Conversation service for managing conversation data."""
 
+import os
 from typing import Optional
 
 from valuecell.core.conversation import (
     ConversationManager,
-    SQLiteConversationStore,
-    SQLiteItemStore,
+    PostgresConversationStore,
+    PostgresItemStore,
 )
 from valuecell.core.conversation.service import (
     ConversationService as CoreConversationService,
@@ -22,7 +23,7 @@ from valuecell.server.api.schemas.conversation import (
     ConversationListItem,
     MessageData,
 )
-from valuecell.utils import resolve_db_path
+from valuecell.utils.db import resolve_postgres_dsn
 
 # Agent names used by strategy creation flows; conversations from these agents
 # should be excluded from the general conversation list returned to clients.
@@ -33,15 +34,25 @@ STRATEGY_AGENT_NAMES = {
 }
 
 
+def _create_conversation_store():
+    """Create PostgreSQL conversation store."""
+    dsn = resolve_postgres_dsn()
+    return PostgresConversationStore(dsn=dsn)
+
+
+def _create_item_store():
+    """Create PostgreSQL item store."""
+    dsn = resolve_postgres_dsn()
+    return PostgresItemStore(dsn=dsn)
+
+
 class ConversationService:
     """Service for managing conversation operations."""
 
     def __init__(self):
         """Initialize the conversation service."""
-        # Use the existing database path resolver
-        db_path = resolve_db_path()
-        self.item_store = SQLiteItemStore(db_path=db_path)
-        conversation_store = SQLiteConversationStore(db_path=db_path)
+        self.item_store = _create_item_store()
+        conversation_store = _create_conversation_store()
         self.conversation_manager = ConversationManager(
             conversation_store=conversation_store, item_store=self.item_store
         )
@@ -55,7 +66,7 @@ class ConversationService:
     ) -> ConversationListData:
         """Get a list of conversations with optional filtering and pagination."""
         # Get conversations from the manager
-        conversations = await self.conversation_manager.list_user_conversations(
+        conversations = self.conversation_manager.list_user_conversations(
             user_id=user_id
         )
 
@@ -95,7 +106,7 @@ class ConversationService:
 
     async def _validate_conversation_exists(self, conversation_id: str) -> None:
         """Validate that a conversation exists, raise ValueError if not found."""
-        conversation = await self.conversation_manager.get_conversation(conversation_id)
+        conversation = self.conversation_manager.get_conversation(conversation_id)
         if not conversation:
             raise ValueError(f"Conversation {conversation_id} not found")
 
@@ -143,10 +154,8 @@ class ConversationService:
         await self._validate_conversation_exists(conversation_id)
 
         # Retrieve persisted conversation items and rebuild responses
-        conversation_items = (
-            await self.core_conversation_service.get_conversation_items(
-                conversation_id=conversation_id,
-            )
+        conversation_items = self.core_conversation_service.get_conversation_items(
+            conversation_id=conversation_id,
         )
 
         base_responses = []
@@ -181,12 +190,10 @@ class ConversationService:
         await self._validate_conversation_exists(conversation_id)
 
         # Retrieve persisted conversation items and rebuild responses
-        conversation_items = (
-            await self.core_conversation_service.get_conversation_items(
-                conversation_id=conversation_id,
-                event=CommonResponseEvent.COMPONENT_GENERATOR.value,
-                component_type=ComponentType.SCHEDULED_TASK_RESULT.value,
-            )
+        conversation_items = self.core_conversation_service.get_conversation_items(
+            conversation_id=conversation_id,
+            event=CommonResponseEvent.COMPONENT_GENERATOR.value,
+            component_type=ComponentType.SCHEDULED_TASK_RESULT.value,
         )
 
         base_responses = [
@@ -209,7 +216,7 @@ class ConversationService:
     ) -> AllConversationsScheduledTaskData:
         """Get scheduled task results from all conversations, grouped by agent name."""
         # Get all conversations
-        conversations = await self.conversation_manager.list_user_conversations(
+        conversations = self.conversation_manager.list_user_conversations(
             user_id=user_id
         )
 
@@ -220,7 +227,7 @@ class ConversationService:
         # Process each conversation
         for conversation in conversations:
             # Get conversation items
-            conversation_items = await self.conversation_manager.get_conversation_items(
+            conversation_items = self.conversation_manager.get_conversation_items(
                 conversation.conversation_id
             )
 
@@ -282,7 +289,7 @@ class ConversationService:
     async def delete_conversation(self, conversation_id: str) -> ConversationDeleteData:
         """Delete a conversation and all its associated data."""
         # Check if conversation exists
-        conversation = await self.conversation_manager.get_conversation(conversation_id)
+        conversation = self.conversation_manager.get_conversation(conversation_id)
         if not conversation:
             raise ValueError(f"Conversation {conversation_id} not found")
 

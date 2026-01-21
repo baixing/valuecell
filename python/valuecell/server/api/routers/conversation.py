@@ -1,8 +1,10 @@
 """Conversation API routes."""
 
+import traceback
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Path, Query
+from loguru import logger
 
 from valuecell.server.services.conversation_service import get_conversation_service
 
@@ -85,6 +87,7 @@ def create_conversation_router() -> APIRouter:
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
+            logger.error(f"Error getting conversation history: {e}\n{traceback.format_exc()}")
             raise HTTPException(
                 status_code=500, detail=f"Internal server error: {str(e)}"
             )
@@ -111,6 +114,7 @@ def create_conversation_router() -> APIRouter:
         except ValueError as e:
             raise HTTPException(status_code=404, detail=str(e))
         except Exception as e:
+            logger.error(f"Error getting scheduled task results: {e}\n{traceback.format_exc()}")
             raise HTTPException(
                 status_code=500, detail=f"Internal server error: {str(e)}"
             )

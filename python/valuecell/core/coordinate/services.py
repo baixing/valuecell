@@ -8,8 +8,8 @@ from typing import Optional
 from valuecell.core.agent.connect import RemoteConnections
 from valuecell.core.conversation import (
     ConversationManager,
-    SQLiteConversationStore,
-    SQLiteItemStore,
+    PostgresConversationStore,
+    PostgresItemStore,
 )
 from valuecell.core.conversation.service import ConversationService
 from valuecell.core.event.service import EventResponseService
@@ -18,7 +18,19 @@ from valuecell.core.super_agent import SuperAgentService
 from valuecell.core.task.executor import TaskExecutor
 from valuecell.core.task.locator import get_task_service
 from valuecell.core.task.service import TaskService
-from valuecell.utils import resolve_db_path
+from valuecell.utils.db import resolve_postgres_dsn
+
+
+def _create_conversation_store():
+    """Create PostgreSQL conversation store."""
+    dsn = resolve_postgres_dsn()
+    return PostgresConversationStore(dsn=dsn)
+
+
+def _create_item_store():
+    """Create PostgreSQL item store."""
+    dsn = resolve_postgres_dsn()
+    return PostgresItemStore(dsn=dsn)
 
 
 @dataclass(frozen=True)
@@ -60,8 +72,8 @@ class AgentServiceBundle:
             conv_service = event_service.conversation_service
         else:
             base_manager = ConversationManager(
-                conversation_store=SQLiteConversationStore(resolve_db_path()),
-                item_store=SQLiteItemStore(resolve_db_path()),
+                conversation_store=_create_conversation_store(),
+                item_store=_create_item_store(),
             )
             conv_service = ConversationService(manager=base_manager)
 

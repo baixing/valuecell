@@ -16,14 +16,20 @@ from __future__ import annotations
 import threading
 from typing import Optional
 
-from valuecell.utils.db import resolve_db_path
+from valuecell.utils.db import resolve_postgres_dsn
 
 from .manager import TaskManager
 from .service import TaskService
-from .task_store import SQLiteTaskStore
+from .task_store import PostgresTaskStore
 
 _task_service: Optional[TaskService] = None
 _lock = threading.Lock()
+
+
+def _create_task_store():
+    """Create PostgreSQL task store."""
+    dsn = resolve_postgres_dsn()
+    return PostgresTaskStore(dsn=dsn)
 
 
 def get_task_service() -> TaskService:
@@ -32,8 +38,7 @@ def get_task_service() -> TaskService:
     if _task_service is None:
         with _lock:
             if _task_service is None:
-                db_path = resolve_db_path()
-                task_store = SQLiteTaskStore(db_path)
+                task_store = _create_task_store()
                 manager = TaskManager(task_store)
 
                 _task_service = TaskService(manager=manager)
