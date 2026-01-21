@@ -28,10 +28,17 @@ def create_strategy_prompts_router() -> APIRouter:
     )
 
     @router.get(
+        "",
+        response_model=PromptListResponse,
+        summary="List strategy prompts",
+        description="Return all available strategy prompts (unordered by recency).",
+    )
+    @router.get(
         "/",
         response_model=PromptListResponse,
         summary="List strategy prompts",
         description="Return all available strategy prompts (unordered by recency).",
+        include_in_schema=False,  # 避免重复文档
     )
     async def list_prompts(db: Session = Depends(get_db)) -> PromptListResponse:
         try:
