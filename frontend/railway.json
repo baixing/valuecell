@@ -4,7 +4,7 @@
     "builder": "NIXPACKS",
     "buildCommand": "bun install && bun run build",
     "nixpacksConfig": {
-      "environment": {
+      "variables": {
         "NODE_VERSION": "22"
       }
     }
