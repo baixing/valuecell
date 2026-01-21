@@ -1,12 +1,10 @@
 {
   "$schema": "https://railway.app/schema.json",
   "build": {
-    "builder": "NIXPACKS",
+    "builder": "RAILPACK",
     "buildCommand": "bun install && bun run build",
-    "nixpacksConfig": {
-      "variables": {
-        "NODE_VERSION": "22"
-      }
+    "railpackConfig": {
+      "nodeVersion": "22"
     }
   },
   "deploy": {
