@@ -35,7 +35,6 @@ def create_strategy_router() -> APIRouter:
 
     router = APIRouter(
         prefix="/strategies",
-        redirect_slashes=False,
         tags=["strategies"],
         responses={404: {"description": "Not found"}},
     )

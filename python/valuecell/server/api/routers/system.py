@@ -33,7 +33,7 @@ def _get_client_ip(request: Request) -> Optional[str]:
 
 def create_system_router() -> APIRouter:
     """Create system related routes."""
-    router = APIRouter(prefix="/system", redirect_slashes=False, tags=["System"])
+    router = APIRouter(prefix="/system", tags=["System"])
     settings = get_settings()
 
     @router.get(

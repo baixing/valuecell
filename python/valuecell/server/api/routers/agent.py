@@ -24,7 +24,6 @@ def create_agent_router() -> APIRouter:
 
     router = APIRouter(
         prefix="/agents",
-        redirect_slashes=False,
         tags=["agents"],
         responses={404: {"description": "Not found"}},
     )

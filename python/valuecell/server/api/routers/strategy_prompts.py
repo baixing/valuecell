@@ -23,7 +23,6 @@ from valuecell.server.db.repositories import get_strategy_repository
 def create_strategy_prompts_router() -> APIRouter:
     router = APIRouter(
         prefix="/strategies/prompts",
-        redirect_slashes=False,
         tags=["strategies"],  # keep under strategy namespace
         responses={404: {"description": "Not found"}},
     )
