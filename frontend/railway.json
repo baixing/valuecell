@@ -2,7 +2,12 @@
   "$schema": "https://railway.app/schema.json",
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "bun install && bun run build"
+    "buildCommand": "bun install && bun run build",
+    "nixpacksConfig": {
+      "environment": {
+        "NODE_VERSION": "22"
+      }
+    }
   },
   "deploy": {
     "startCommand": "nginx -g 'daemon off;'",
