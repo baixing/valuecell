@@ -144,6 +144,13 @@ def create_models_router() -> APIRouter:
         summary="List model providers",
         description="List available providers with status and basics.",
     )
+    @router.get(
+        "/providers/",
+        response_model=SuccessResponse[List[ModelProviderSummary]],
+        summary="List model providers",
+        description="List available providers with status and basics.",
+        include_in_schema=False,  # 避免重复文档
+    )
     async def list_providers() -> SuccessResponse[List[ModelProviderSummary]]:
         try:
             manager = get_config_manager()
