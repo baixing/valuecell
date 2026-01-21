@@ -29,7 +29,7 @@ DEFAULT_USER_ID = "default_user"
 
 def create_watchlist_router() -> APIRouter:
     """Create watchlist related routes."""
-    router = APIRouter(prefix="/watchlist", tags=["Watchlist"])
+    router = APIRouter(prefix="/watchlist", redirect_slashes=False, tags=["Watchlist"])
 
     # Get dependencies
     asset_service = get_asset_service()

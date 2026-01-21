@@ -8,7 +8,7 @@ from valuecell.server.services.task_service import TaskApiService
 
 def create_task_router() -> APIRouter:
     """Create task router."""
-    router = APIRouter(prefix="/tasks", tags=["Tasks"])
+    router = APIRouter(prefix="/tasks", redirect_slashes=False, tags=["Tasks"])
 
     @router.post(
         "/{task_id}/cancel",

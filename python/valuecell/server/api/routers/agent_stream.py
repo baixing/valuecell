@@ -18,7 +18,7 @@ from valuecell.server.services.agent_stream_service import (
 def create_agent_stream_router() -> APIRouter:
     """Create and configure the agent stream router."""
 
-    router = APIRouter(prefix="/agents", tags=["Agent Stream"])
+    router = APIRouter(prefix="/agents", redirect_slashes=False, tags=["Agent Stream"])
     agent_service = AgentStreamService()
 
     @router.on_event("startup")

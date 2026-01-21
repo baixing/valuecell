@@ -62,7 +62,7 @@ def create_i18n_router() -> APIRouter:
     Returns:
         APIRouter: Configured i18n router
     """
-    router = APIRouter(prefix="/i18n", tags=["i18n"])
+    router = APIRouter(prefix="/i18n", redirect_slashes=False, tags=["i18n"])
 
     # Get services
     i18n_service = get_i18n_service()

@@ -12,7 +12,7 @@ from .strategy_prompts import create_strategy_prompts_router
 
 
 def create_strategy_api_router() -> APIRouter:
-    router = APIRouter()
+    router = APIRouter(redirect_slashes=False)
 
     # Include core strategy endpoints (prefix: /strategies)
     router.include_router(create_strategy_router())

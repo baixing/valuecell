@@ -40,7 +40,7 @@ except Exception:  # pragma: no cover - constants may not exist in minimal env
 def create_models_router() -> APIRouter:
     """Create models-related router with endpoints for model configs and provider management."""
 
-    router = APIRouter(prefix="/models", tags=["Models"])
+    router = APIRouter(prefix="/models", redirect_slashes=False, tags=["Models"])
 
     # ---- Utility helpers (local to router) ----
     def _env_paths() -> List[Path]:

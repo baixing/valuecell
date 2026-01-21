@@ -32,7 +32,7 @@ from valuecell.utils.uuid import generate_conversation_id
 def create_strategy_agent_router() -> APIRouter:
     """Create and configure the StrategyAgent router."""
 
-    router = APIRouter(prefix="/strategies", tags=["strategies"])
+    router = APIRouter(prefix="/strategies", redirect_slashes=False, tags=["strategies"])
     orchestrator = AgentOrchestrator()
 
     @router.on_event("startup")

@@ -18,7 +18,7 @@ from ..schemas.conversation import (
 
 def create_conversation_router() -> APIRouter:
     """Create conversation router."""
-    router = APIRouter(prefix="/conversations", tags=["Conversations"])
+    router = APIRouter(prefix="/conversations", redirect_slashes=False, tags=["Conversations"])
 
     @router.get(
         "/",
