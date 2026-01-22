@@ -199,12 +199,12 @@ def _add_routes(app: FastAPI, settings) -> None:
                 version=settings.APP_VERSION,
                 environment=settings.APP_ENVIRONMENT,
             ),
-            msg="Welcome to 666Signal Server API",
+            msg="Welcome to 66Signal Server API",
         )
 
     @app.get(f"{API_PREFIX}/healthz", response_model=SuccessResponse)
     async def health_check():
-        return SuccessResponse.create(msg="Welcome to 666Signal!")
+        return SuccessResponse.create(msg="Welcome to 66Signal!")
 
     # Include i18n router
     app.include_router(create_i18n_router(), prefix=API_PREFIX)
