@@ -7,9 +7,19 @@ ENV BUN_INSTALL=/root/.bun
 ENV PATH=$BUN_INSTALL/bin:$PATH
 
 WORKDIR /app
+
+# Declare build arguments for environment variables
+ARG VITE_API_BASE_URL
+# Set as environment variable for build process
+ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
+
 COPY package.json bun.lock ./
 RUN bun install
 COPY . .
+
+# Remove any .env files to ensure Railway variables are used
+RUN rm -f .env .env.* || true
+
 RUN bun run build
 
 FROM nginx:alpine
