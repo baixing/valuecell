@@ -1,11 +1,13 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional
 
 from loguru import logger
 
 from valuecell.server.db.repositories.strategy_repository import get_strategy_repository
+from valuecell.utils.ts import get_current_timestamp_ms
 from valuecell.utils.uuid import generate_uuid
 
+from ..data.backtest import BacktestDataSource
 from ..decision import BaseComposer, LlmComposer
 from ..execution import BaseExecutionGateway
 from ..execution.factory import create_execution_gateway
@@ -60,9 +62,28 @@ class StrategyRuntime:
     request: UserRequest
     strategy_id: str
     coordinator: DefaultDecisionCoordinator
+    backtest_data_source: Optional[BacktestDataSource] = field(default=None)
+
+    def get_current_timestamp_ms(self) -> int:
+        """Get current timestamp in milliseconds.
+
+        For backtest mode, returns the simulated time from BacktestDataSource.
+        For live/virtual mode, returns the actual current time.
+        """
+        if (
+            self.backtest_data_source is not None
+            and self.request.exchange_config.trading_mode == TradingMode.BACKTEST
+        ):
+            return self.backtest_data_source.get_current_ts()
+        return get_current_timestamp_ms()
 
     async def run_cycle(self) -> DecisionCycleResult:
-        return await self.coordinator.run_once()
+        """Execute one decision cycle.
+
+        Uses simulated time for backtest mode, real time otherwise.
+        """
+        timestamp_ms = self.get_current_timestamp_ms()
+        return await self.coordinator.run_once(timestamp_ms=timestamp_ms)
 
 
 async def create_strategy_runtime(
@@ -117,6 +138,35 @@ async def create_strategy_runtime(
     # Create strategy runtime components
     strategy_id = strategy_id_override or generate_uuid("strategy")
 
+    # For backtest mode, create and preload the backtest data source
+    backtest_data_source: Optional[BacktestDataSource] = None
+    if request.exchange_config.trading_mode == TradingMode.BACKTEST:
+        start_ts = request.trading_config.backtest_start_ts
+        end_ts = request.trading_config.backtest_end_ts
+        if not start_ts or not end_ts:
+            raise ValueError(
+                "Backtest mode requires backtest_start_ts and backtest_end_ts"
+            )
+        if start_ts >= end_ts:
+            raise ValueError("backtest_start_ts must be less than backtest_end_ts")
+
+        # Use okx as default exchange for historical data if not specified
+        exchange_id = request.exchange_config.exchange_id or "okx"
+        backtest_data_source = BacktestDataSource(
+            exchange_id=exchange_id,
+            symbols=request.trading_config.symbols,
+            start_ts=start_ts,
+            end_ts=end_ts,
+        )
+        # Preload historical data
+        logger.info(
+            "Preloading backtest data for strategy_id={}, range={} to {}",
+            strategy_id,
+            start_ts,
+            end_ts,
+        )
+        await backtest_data_source.preload_data(intervals=["1m"])
+
     # If this is a resume of an existing strategy,
     # attempt to initialize from the persisted portfolio snapshot
     # so the in-memory portfolio starts with the previously recorded equity.
@@ -167,7 +217,9 @@ async def create_strategy_runtime(
         composer = LlmComposer(request=request)
 
     if features_pipeline is None:
-        features_pipeline = DefaultFeaturesPipeline.from_request(request)
+        features_pipeline = DefaultFeaturesPipeline.from_request(
+            request, backtest_data_source=backtest_data_source
+        )
 
     history_recorder = InMemoryHistoryRecorder()
     digest_builder = RollingDigestBuilder()
@@ -204,4 +256,5 @@ async def create_strategy_runtime(
         request=request,
         strategy_id=strategy_id,
         coordinator=coordinator,
+        backtest_data_source=backtest_data_source,
     )

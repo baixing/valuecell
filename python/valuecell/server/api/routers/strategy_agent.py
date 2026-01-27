@@ -83,6 +83,38 @@ def create_strategy_agent_router() -> APIRouter:
                     request.exchange_config.exchange_id,
                 )
                 request.exchange_config.exchange_id = None
+
+            # Validate backtest mode parameters
+            if request.exchange_config.trading_mode == TradingMode.BACKTEST:
+                start_ts = request.trading_config.backtest_start_ts
+                end_ts = request.trading_config.backtest_end_ts
+
+                if not start_ts or not end_ts:
+                    return ErrorResponse.create(
+                        code=StatusCode.BAD_REQUEST,
+                        msg="Backtest mode requires backtest_start_ts and backtest_end_ts",
+                    )
+
+                if start_ts >= end_ts:
+                    return ErrorResponse.create(
+                        code=StatusCode.BAD_REQUEST,
+                        msg="backtest_start_ts must be less than backtest_end_ts",
+                    )
+
+                # Enforce maximum backtest duration (30 days in milliseconds)
+                max_duration_ms = 30 * 24 * 60 * 60 * 1000
+                if (end_ts - start_ts) > max_duration_ms:
+                    return ErrorResponse.create(
+                        code=StatusCode.BAD_REQUEST,
+                        msg="Backtest duration cannot exceed 30 days",
+                    )
+
+                logger.info(
+                    "Backtest mode requested: start_ts={}, end_ts={}, duration_days={:.1f}",
+                    start_ts,
+                    end_ts,
+                    (end_ts - start_ts) / (24 * 60 * 60 * 1000),
+                )
             # Ensure we only serialize the core UserRequest fields, excluding conversation_id
             user_request = UserRequest(
                 llm_model_config=request.llm_model_config,

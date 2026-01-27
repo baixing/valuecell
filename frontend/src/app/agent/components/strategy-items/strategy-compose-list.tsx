@@ -230,7 +230,9 @@ const StrategyComposeList: FC<StrategyComposeListProps> = ({
         <p className="rounded-md bg-muted px-2.5 py-1 font-medium text-foreground text-sm">
           {tradingMode === "live"
             ? t("strategy.history.live")
-            : t("strategy.history.virtual")}
+            : tradingMode === "backtest"
+              ? t("strategy.history.backtest")
+              : t("strategy.history.virtual")}
         </p>
       </div>
 

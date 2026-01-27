@@ -13,6 +13,7 @@ from valuecell.agents.common.trading.models import (
     TradingMode,
 )
 from valuecell.agents.common.trading.utils import extract_price_map
+from valuecell.utils.ts import get_current_timestamp_ms
 
 from .interfaces import BasePortfolioService
 
@@ -79,8 +80,18 @@ class InMemoryPortfolioService(BasePortfolioService):
         self._trading_mode = trading_mode
         self._market_type = market_type
 
-    def get_view(self) -> PortfolioView:
-        self._view.ts = int(datetime.now(timezone.utc).timestamp() * 1000)
+    def get_view(self, *, timestamp_ms: Optional[int] = None) -> PortfolioView:
+        """Return the latest portfolio view.
+
+        Args:
+            timestamp_ms: Optional timestamp override in milliseconds.
+                For backtest mode, this should be the simulated time.
+                If None, uses the current real time.
+        """
+        if timestamp_ms is not None:
+            self._view.ts = timestamp_ms
+        else:
+            self._view.ts = get_current_timestamp_ms()
         # Ensure strategy_id is present on each view retrieval
         if self._strategy_id is not None:
             try:

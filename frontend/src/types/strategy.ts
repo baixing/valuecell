@@ -1,12 +1,14 @@
 // Strategy types
 
+export type TradingMode = "live" | "virtual" | "backtest";
+
 export interface Strategy {
   strategy_id: number;
   strategy_name: string;
   strategy_type: "PromptBasedStrategy" | "GridStrategy";
   status: "running" | "stopped";
   stop_reason?: string;
-  trading_mode: "live" | "virtual";
+  trading_mode: TradingMode;
   total_pnl: number;
   total_pnl_pct: number;
   created_at: string;
@@ -90,7 +92,7 @@ export interface CreateStrategy {
   // Exchange Configuration
   exchange_config: {
     exchange_id: string; // e.g. 'okx'
-    trading_mode: "live" | "virtual";
+    trading_mode: TradingMode;
     api_key: string;
     secret_key: string;
     passphrase: string; // Required for some exchanges like OKX
@@ -107,6 +109,9 @@ export interface CreateStrategy {
     template_id: string;
     decide_interval: number;
     strategy_type: Strategy["strategy_type"];
+    // Backtest-specific fields
+    backtest_start_ts?: number;
+    backtest_end_ts?: number;
   };
 }
 
@@ -122,7 +127,7 @@ export interface CopyStrategy {
   // Exchange Configuration
   exchange_config: {
     exchange_id: string; // e.g. 'okx'
-    trading_mode: "live" | "virtual";
+    trading_mode: TradingMode;
     api_key: string;
     secret_key: string;
     passphrase: string; // Required for some exchanges like OKX

@@ -173,6 +173,7 @@
       "dashscope": "Alibaba Cloud",
       "deepseek": "DeepSeek",
       "google": "Google Cloud",
+      "ollama": "Ollama",
       "openai": "OpenAI",
       "openai-compatible": "OpenAI Compatible API",
       "openrouter": "OpenRouter",
@@ -186,7 +187,8 @@
       "running": "Running",
       "stopped": "Stopped",
       "live": "Live",
-      "virtual": "Virtual"
+      "virtual": "Virtual",
+      "backtest": "Backtest"
     },
     "action": {
       "stop": "Stop Trading Strategy?",
@@ -282,10 +284,15 @@
           "placeholder": "Enter API Key"
         }
       },
+      "backtest": {
+        "startTime": "Backtest Start Time",
+        "endTime": "Backtest End Time"
+      },
       "exchanges": {
         "transactionType": "Transaction Type",
         "liveTrading": "Live Trading",
         "virtualTrading": "Virtual Trading",
+        "backtesting": "Backtesting",
         "selectExchange": "Select Exchange",
         "walletAddress": "Wallet Address",
         "privateKey": "Private Key",
@@ -360,6 +367,7 @@
       "title": "Trading History",
       "live": "Live Trading",
       "virtual": "Virtual Trading",
+      "backtest": "Backtest",
       "cycle": "Cycle #{{index}}",
       "aiReasoning": "AI reasoning logic",
       "operation": "Perform operation",
@@ -429,6 +437,35 @@
         "title": "Pushing News",
         "description": "Personalized news updates on a custom schedule."
       }
+    }
+  },
+  "validation": {
+    "aiModel": {
+      "providerRequired": "Provider is required",
+      "modelIdRequired": "Model ID is required",
+      "apiKeyRequired": "API Key is required"
+    },
+    "exchange": {
+      "walletAddressHyperliquidRequired": "Wallet address is required for Hyperliquid",
+      "privateKeyHyperliquidRequired": "Private key is required for Hyperliquid",
+      "apiKeyRequired": "API Key is required",
+      "secretKeyRequired": "Secret Key is required",
+      "passphraseRequired": "Passphrase is required"
+    },
+    "trading": {
+      "strategyNameRequired": "Strategy name is required",
+      "initialCapitalMin": "Initial capital must be at least 1",
+      "maxLeverageMin": "Max leverage must be at least 1",
+      "maxLeverageMax": "Max leverage cannot exceed 5",
+      "symbolsMin": "At least one symbol is required",
+      "templateRequired": "Prompt template is required",
+      "decideIntervalMin": "Decision interval must be at least 10 seconds",
+      "decideIntervalMax": "Decision interval cannot exceed 3600 seconds",
+      "backtestTimeRangeInvalid": "Backtest end time must be after start time"
+    },
+    "copy": {
+      "promptNameRequired": "Prompt name is required",
+      "promptRequired": "Prompt is required"
     }
   }
 }

@@ -102,7 +102,9 @@ const TradeStrategyCard: FC<TradeStrategyCardProps> = ({
         <p className="rounded-sm bg-muted px-2 py-1 text-foreground text-xs">
           {strategy.trading_mode === "live"
             ? t("strategy.status.live")
-            : t("strategy.status.virtual")}
+            : strategy.trading_mode === "backtest"
+              ? t("strategy.status.backtest")
+              : t("strategy.status.virtual")}
         </p>
       </div>
 

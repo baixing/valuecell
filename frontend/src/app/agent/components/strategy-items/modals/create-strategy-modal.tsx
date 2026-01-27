@@ -35,7 +35,7 @@ import {
 } from "@/constants/schema";
 import { useAppForm } from "@/hooks/use-form";
 import { tracker } from "@/lib/tracker";
-import type { CreateStrategy, Strategy } from "@/types/strategy";
+import type { CreateStrategy, Strategy, TradingMode } from "@/types/strategy";
 
 export interface CreateStrategyModelRef {
   open: (data?: CreateStrategy) => void;
@@ -52,10 +52,6 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
   const { t } = useTranslation();
   const aiModelSchema = useMemo(() => createAiModelSchema(t), [t]);
   const exchangeSchema = useMemo(() => createExchangeSchema(t), [t]);
-  const tradingStrategySchema = useMemo(
-    () => createTradingStrategySchema(t),
-    [t],
-  );
   const [open, setOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const [error, setError] = useState<string | null>(null);
@@ -92,7 +88,7 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
   // Step 2 Form: Exchanges
   const form2 = useAppForm({
     defaultValues: {
-      trading_mode: "live" as "live" | "virtual",
+      trading_mode: "live" as TradingMode,
       exchange_id: "okx",
       api_key: "",
       secret_key: "",
@@ -113,8 +109,10 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       const exchangeName =
         trading_mode === "virtual"
           ? "Virtual"
-          : EXCHANGE_OPTIONS.find((ex) => ex.value === exchange_id)?.label ||
-            exchange_id;
+          : trading_mode === "backtest"
+            ? "Backtest"
+            : EXCHANGE_OPTIONS.find((ex) => ex.value === exchange_id)?.label ||
+              exchange_id;
 
       const baseName = `${modelName}-${exchangeName}`;
       let newName = baseName;
@@ -130,6 +128,18 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
     },
   });
 
+  // Get trading mode for schema validation
+  const tradingMode = useStore(
+    form2.store,
+    (state) => state.values.trading_mode,
+  );
+
+  // Create trading strategy schema with trading mode
+  const tradingStrategySchema = useMemo(
+    () => createTradingStrategySchema(t, tradingMode),
+    [t, tradingMode],
+  );
+
   // Step 3 Form: Trading Strategy
   const form3 = useAppForm({
     defaultValues: {
@@ -140,6 +150,8 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       decide_interval: 60,
       symbols: TRADING_SYMBOLS,
       template_id: prompts.length > 0 ? prompts[0].id : "",
+      backtest_start_ts: undefined as number | undefined,
+      backtest_end_ts: undefined as number | undefined,
     },
     validators: {
       onSubmit: tradingStrategySchema,

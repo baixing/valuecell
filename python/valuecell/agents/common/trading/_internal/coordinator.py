@@ -59,8 +59,16 @@ class DecisionCoordinator(ABC):
     """
 
     @abstractmethod
-    async def run_once(self) -> DecisionCycleResult:
-        """Execute one decision cycle and return the result."""
+    async def run_once(
+        self, *, timestamp_ms: Optional[int] = None
+    ) -> DecisionCycleResult:
+        """Execute one decision cycle and return the result.
+
+        Args:
+            timestamp_ms: Optional timestamp override in milliseconds.
+                For backtest mode, this should be the simulated time.
+                If None, uses the current real time.
+        """
         raise NotImplementedError
 
     @abstractmethod
@@ -103,11 +111,15 @@ class DefaultDecisionCoordinator(DecisionCoordinator):
         self.cycle_index: int = 0
         self._strategy_name = request.trading_config.strategy_name or strategy_id
 
-    async def run_once(self) -> DecisionCycleResult:
-        timestamp_ms = get_current_timestamp_ms()
+    async def run_once(
+        self, *, timestamp_ms: Optional[int] = None
+    ) -> DecisionCycleResult:
+        # Use provided timestamp (for backtest) or current real time
+        if timestamp_ms is None:
+            timestamp_ms = get_current_timestamp_ms()
         compose_id = generate_uuid("compose")
 
-        portfolio = self.portfolio_service.get_view()
+        portfolio = self.portfolio_service.get_view(timestamp_ms=timestamp_ms)
         # LIVE mode: sync cash from exchange free balance; set buying power to cash
         try:
             if self._request.exchange_config.trading_mode == TradingMode.LIVE:
@@ -241,7 +253,7 @@ class DefaultDecisionCoordinator(DecisionCoordinator):
         digest = self._digest_builder.build(self._history_recorder.get_records())
         self.cycle_index += 1
 
-        portfolio = self.portfolio_service.get_view()
+        portfolio = self.portfolio_service.get_view(timestamp_ms=timestamp_ms)
         return DecisionCycleResult(
             compose_id=compose_id,
             timestamp_ms=timestamp_ms,

@@ -17,7 +17,6 @@ from loguru import logger
 from valuecell.agents.common.trading import models as agent_models
 from valuecell.server.db.repositories.strategy_repository import get_strategy_repository
 from valuecell.server.services import strategy_persistence
-from valuecell.utils.ts import get_current_timestamp_ms
 
 if TYPE_CHECKING:
     from valuecell.agents.common.trading._internal.coordinator import (
@@ -102,7 +101,11 @@ class StreamController:
         try:
             # Check if this is the first-ever snapshot before persisting
             is_first_snapshot = not self.has_initial_state()
-            initial_portfolio = runtime.coordinator.portfolio_service.get_view()
+            # Use runtime's timestamp method for correct backtest time
+            timestamp_ms = runtime.get_current_timestamp_ms()
+            initial_portfolio = runtime.coordinator.portfolio_service.get_view(
+                timestamp_ms=timestamp_ms
+            )
             try:
                 initial_portfolio.strategy_id = self.strategy_id
             except Exception:
@@ -114,7 +117,6 @@ class StreamController:
                     "Persisted initial portfolio view for strategy={}", self.strategy_id
                 )
 
-            timestamp_ms = get_current_timestamp_ms()
             initial_summary = runtime.coordinator.build_summary(timestamp_ms, [])
             ok = strategy_persistence.persist_strategy_summary(initial_summary)
             if ok:
@@ -286,7 +288,11 @@ class StreamController:
         Errors are logged and swallowed.
         """
         try:
-            view = runtime.coordinator.portfolio_service.get_view()
+            # Use runtime's timestamp method for correct backtest time
+            timestamp_ms = runtime.get_current_timestamp_ms()
+            view = runtime.coordinator.portfolio_service.get_view(
+                timestamp_ms=timestamp_ms
+            )
             try:
                 view.strategy_id = self.strategy_id
             except Exception:

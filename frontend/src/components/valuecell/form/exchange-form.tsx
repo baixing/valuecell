@@ -118,9 +118,11 @@ const getPlaceholder = (
   return "";
 };
 
+import type { TradingMode } from "@/types/strategy";
+
 export const ExchangeForm = withForm({
   defaultValues: {
-    trading_mode: "live" as "live" | "virtual",
+    trading_mode: "live" as TradingMode,
     exchange_id: "",
     api_key: "",
     secret_key: "",
@@ -157,15 +159,13 @@ export const ExchangeForm = withForm({
         <form.AppField
           listeners={{
             onChange: ({ value }) => {
-              form.reset({
-                trading_mode: value,
-                exchange_id: value === "live" ? "okx" : "",
-                api_key: "",
-                secret_key: "",
-                passphrase: "",
-                wallet_address: "",
-                private_key: "",
-              });
+              // Reset other fields when trading mode changes
+              form.setFieldValue("exchange_id", value === "live" ? "okx" : "");
+              form.setFieldValue("api_key", "");
+              form.setFieldValue("secret_key", "");
+              form.setFieldValue("passphrase", "");
+              form.setFieldValue("wallet_address", "");
+              form.setFieldValue("private_key", "");
             },
           }}
           name="trading_mode"
@@ -184,6 +184,12 @@ export const ExchangeForm = withForm({
                 <RadioGroupItem value="virtual" id="virtual" />
                 <Label htmlFor="virtual" className="text-sm">
                   {t("strategy.form.exchanges.virtualTrading")}
+                </Label>
+              </div>
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="backtest" id="backtest" />
+                <Label htmlFor="backtest" className="text-sm">
+                  {t("strategy.form.exchanges.backtesting")}
                 </Label>
               </div>
             </field.RadioField>

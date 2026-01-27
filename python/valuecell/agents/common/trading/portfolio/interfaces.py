@@ -17,8 +17,14 @@ class BasePortfolioService(ABC):
     """
 
     @abstractmethod
-    def get_view(self) -> PortfolioView:
-        """Return the latest portfolio view (positions, cash, optional constraints)."""
+    def get_view(self, *, timestamp_ms: Optional[int] = None) -> PortfolioView:
+        """Return the latest portfolio view (positions, cash, optional constraints).
+
+        Args:
+            timestamp_ms: Optional timestamp override in milliseconds.
+                For backtest mode, this should be the simulated time.
+                If None, uses the current real time.
+        """
         raise NotImplementedError
 
     def apply_trades(

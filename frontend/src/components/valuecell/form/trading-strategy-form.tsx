@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 import { TRADING_SYMBOLS } from "@/constants/agent";
 import { withForm } from "@/hooks/use-form";
-import type { Strategy, StrategyPrompt } from "@/types/strategy";
+import type { Strategy, StrategyPrompt, TradingMode } from "@/types/strategy";
 
 export const TradingStrategyForm = withForm({
   defaultValues: {
@@ -45,10 +45,12 @@ export const TradingStrategyForm = withForm({
     decide_interval: 60,
     symbols: TRADING_SYMBOLS,
     template_id: "",
+    backtest_start_ts: undefined as number | undefined,
+    backtest_end_ts: undefined as number | undefined,
   },
   props: {
     prompts: [] as StrategyPrompt[],
-    tradingMode: "live" as "live" | "virtual",
+    tradingMode: "live" as TradingMode,
   },
   render({ form, prompts, tradingMode }) {
     const { t } = useTranslation();
@@ -122,7 +124,7 @@ export const TradingStrategyForm = withForm({
         </form.AppField>
 
         <FieldGroup className="flex flex-row gap-4">
-          {tradingMode === "virtual" && (
+          {(tradingMode === "virtual" || tradingMode === "backtest") && (
             <form.AppField name="initial_capital">
               {(field) => (
                 <field.NumberField
@@ -144,6 +146,27 @@ export const TradingStrategyForm = withForm({
             )}
           </form.AppField>
         </FieldGroup>
+
+        {tradingMode === "backtest" && (
+          <FieldGroup className="flex flex-row gap-4">
+            <form.AppField name="backtest_start_ts">
+              {(field) => (
+                <field.DateTimeField
+                  className="flex-1"
+                  label={t("strategy.form.backtest.startTime")}
+                />
+              )}
+            </form.AppField>
+            <form.AppField name="backtest_end_ts">
+              {(field) => (
+                <field.DateTimeField
+                  className="flex-1"
+                  label={t("strategy.form.backtest.endTime")}
+                />
+              )}
+            </form.AppField>
+          </FieldGroup>
+        )}
 
         <form.AppField name="decide_interval">
           {(field) => (

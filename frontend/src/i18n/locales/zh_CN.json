@@ -173,6 +173,7 @@
       "dashscope": "阿里云",
       "deepseek": "深度求索",
       "google": "谷歌云",
+      "ollama": "Ollama",
       "openai": "OpenAI",
       "openai-compatible": "OpenAI兼容API",
       "openrouter": "OpenRouter",
@@ -186,7 +187,8 @@
       "running": "运行中",
       "stopped": "已停止",
       "live": "实盘",
-      "virtual": "虚拟"
+      "virtual": "虚拟",
+      "backtest": "回测"
     },
     "action": {
       "stop": "停止交易策略？",
@@ -282,10 +284,15 @@
           "placeholder": "输入 API Key"
         }
       },
+      "backtest": {
+        "startTime": "回测开始时间",
+        "endTime": "回测结束时间"
+      },
       "exchanges": {
         "transactionType": "交易类型",
         "liveTrading": "实盘交易",
         "virtualTrading": "模拟交易",
+        "backtesting": "回测",
         "selectExchange": "选择交易所",
         "walletAddress": "钱包地址",
         "privateKey": "私钥",
@@ -360,6 +367,7 @@
       "title": "交易历史",
       "live": "实盘交易",
       "virtual": "模拟交易",
+      "backtest": "回测",
       "cycle": "周期 #{{index}}",
       "aiReasoning": "AI推理逻辑",
       "operation": "执行操作",
@@ -429,6 +437,35 @@
         "title": "新闻推送",
         "description": "按自定义时间表推送个性化新闻更新。"
       }
+    }
+  },
+  "validation": {
+    "aiModel": {
+      "providerRequired": "请选择模型提供商",
+      "modelIdRequired": "请选择模型",
+      "apiKeyRequired": "请输入API Key"
+    },
+    "exchange": {
+      "walletAddressHyperliquidRequired": "Hyperliquid需要钱包地址",
+      "privateKeyHyperliquidRequired": "Hyperliquid需要私钥",
+      "apiKeyRequired": "请输入API Key",
+      "secretKeyRequired": "请输入Secret Key",
+      "passphraseRequired": "请输入Passphrase"
+    },
+    "trading": {
+      "strategyNameRequired": "请输入策略名称",
+      "initialCapitalMin": "初始资金至少为1",
+      "maxLeverageMin": "最大杠杆至少为1",
+      "maxLeverageMax": "最大杠杆不能超过5",
+      "symbolsMin": "至少选择一个交易对",
+      "templateRequired": "请选择提示词模板",
+      "decideIntervalMin": "决策间隔至少为10秒",
+      "decideIntervalMax": "决策间隔不能超过3600秒",
+      "backtestTimeRangeInvalid": "回测结束时间必须晚于开始时间"
+    },
+    "copy": {
+      "promptNameRequired": "请输入提示词名称",
+      "promptRequired": "请输入提示词内容"
     }
   }
 }

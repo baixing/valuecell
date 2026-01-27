@@ -21,10 +21,15 @@ db/
 
 Database configuration is defined in `valuecell/server/config/settings.py`:
 
-- `VALUECELL_DATABASE_URL`: Database connection URL. Defaults to a SQLite file under the system application directory (same place as `.env`):
-  - macOS: `sqlite:///~/Library/Application Support/ValueCell/valuecell.db`
-  - Linux: `sqlite:///~/.config/valuecell/valuecell.db`
-  - Windows: `sqlite:///%APPDATA%/ValueCell/valuecell.db`
+- `VALUECELL_DATABASE_URL`: PostgreSQL connection URL
+  - Format: `postgresql://user:password@host:port/database`
+  - Example: `postgresql://postgres:password@localhost:5432/valuecell`
+- Alternative: Use individual PostgreSQL environment variables:
+  - `PGHOST`: Database host (default: `localhost`)
+  - `PGPORT`: Database port (default: `5432`)
+  - `PGUSER`: Database user (default: `postgres`)
+  - `PGPASSWORD`: Database password
+  - `PGDATABASE`: Database name (default: `valuecell`)
 - `DB_ECHO`: Whether to output SQL logs, defaults to `false`
 
 ## Database Models
@@ -95,17 +100,16 @@ The Asset model represents financial assets in the ValueCell system, including s
 
 ### Initialization Process
 
-1. **Check database file**: Verify if SQLite database file exists
-2. **Create database file**: Create new database file if it doesn't exist
-3. **Create table structure**: Create agents and assets tables based on model definitions
-4. **Initialize default data**:
+1. **Check database connection**: Verify PostgreSQL database is accessible
+2. **Create table structure**: Create agents and assets tables based on model definitions
+3. **Initialize default data**:
    - **Agent data**: Insert default Agent records directly from code
      - Create three default agents: AIHedgeFundAgent, Sec13FundAgent, and TradingAgents
      - Support updating existing Agent configuration information
    - **Asset data**: Insert default Asset records for common financial instruments
      - Create default assets: AAPL, GOOGL, MSFT, SPY, BTC-USD
      - Support updating existing Asset information
-5. **Verify initialization**: Confirm database connection and table structure are correct
+4. **Verify initialization**: Confirm database connection and table structure are correct
 
 ### Default Records
 
@@ -225,30 +229,26 @@ else:
 ## Important Notes
 
 1. **Password Security**: Default admin user password is a placeholder and should be replaced with proper hashed password in production environment
-2. **Database Backup**: SQLite database file should be backed up regularly
-3. **Permission Management**: Ensure database file has appropriate filesystem permissions
+2. **Database Backup**: PostgreSQL database should be backed up regularly using `pg_dump`
+3. **Permission Management**: Ensure database user has appropriate permissions
 4. **Environment Variables**: Database connection can be customized through `VALUECELL_DATABASE_URL` environment variable
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **Permission Error**: Ensure write permissions to database file directory
-2. **Module Import Error**: Ensure running in correct Python environment
-3. **Database Lock**: Ensure no other processes are using the database file
+1. **Connection Error**: Ensure PostgreSQL server is running and accessible
+2. **Permission Error**: Ensure database user has appropriate permissions
+3. **Module Import Error**: Ensure running in correct Python environment
 
 ### Reset Database
 
 If you need to completely reset the database:
 
 ```bash
-# Delete existing database file (choose your OS path)
-# macOS
-rm -f "$HOME/Library/Application Support/ValueCell/valuecell.db"
-# Linux
-rm -f "$HOME/.config/valuecell/valuecell.db"
-# Windows (PowerShell)
-Remove-Item "$env:APPDATA\ValueCell\valuecell.db" -ErrorAction SilentlyContinue
+# Drop and recreate the database using psql
+psql -U postgres -c "DROP DATABASE IF EXISTS valuecell;"
+psql -U postgres -c "CREATE DATABASE valuecell;"
 
 # Re-initialize
 python3 -m valuecell.server.db.init_db

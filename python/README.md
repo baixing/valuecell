@@ -8,7 +8,7 @@
 - Planner with HITL: pauses on missing info/risky steps via async `UserInputRequest`, resumes after user feedback to produce an adequate plan.
 - Streaming pipeline: `Response` → `ResponseBuffer` (buffered vs immediate with stable item_id) → `ResponseRouter` to UI and Store.
 - Agent2Agent (A2A) integration: first-class support via a2a-sdk for agent-to-agent protocols, message schemas, and optional HTTP server interop.
-- Conversation memory: in-memory/SQLite stores enable reproducible history, fast "resume from last", and auditability.
+- Conversation memory: PostgreSQL stores enable reproducible history, fast "resume from last", and auditability.
 - Robustness & extensibility: typed events/errors, router side-effects (e.g., fail task), and clear seams to add agents, stores, transports, and planner logic.
 
 See detailed flow diagrams and design notes in `../docs/CORE_ARCHITECTURE.md`.

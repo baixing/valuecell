@@ -13,6 +13,7 @@ from valuecell.agents.common.trading.models import (
     StopReason,
     StrategyStatus,
     StrategyStatusContent,
+    TradingMode,
     UserRequest,
 )
 from valuecell.core.agent.responses import streaming
@@ -255,39 +256,13 @@ class BaseStrategyAgent(BaseAgent, ABC):
             # Always attempt to persist an initial state (idempotent write).
             controller.persist_initial_state(runtime)
 
-            # Main decision loop
-            while controller.is_running():
-                result = await runtime.run_cycle()
-                logger.info(
-                    "Run cycle completed for strategy={} trades_count={}",
-                    strategy_id,
-                    len(result.trades),
-                )
-
-                # Persist cycle results
-                controller.persist_cycle_results(result)
-
-                # Call user hook for post-cycle logic
-                try:
-                    await self._on_cycle_result(result, runtime, request)
-                except Exception:
-                    logger.exception(
-                        "Error in _on_cycle_result hook for strategy {}", strategy_id
-                    )
-
-                logger.info(
-                    "Waiting for next decision cycle for strategy_id={}, interval={}seconds",
-                    strategy_id,
-                    request.trading_config.decide_interval,
-                )
-
-                # Sleep in 1s increments so we can react to controller stop
-                # and to cancellation promptly instead of blocking for the
-                # whole interval at once.
-                for _ in range(request.trading_config.decide_interval):
-                    if not controller.is_running():
-                        break
-                    await asyncio.sleep(1)
+            # Branch based on trading mode
+            if request.exchange_config.trading_mode == TradingMode.BACKTEST:
+                # Backtest mode: fast loop without sleep
+                await self._run_backtest_loop(controller, runtime, request)
+            else:
+                # Live/Virtual mode: realtime loop with sleep
+                await self._run_realtime_loop(controller, runtime, request)
 
             logger.info(
                 "Strategy_id={} is no longer running, exiting decision loop",
@@ -339,6 +314,119 @@ class BaseStrategyAgent(BaseAgent, ABC):
             await controller.finalize(
                 runtime, reason=stop_reason, reason_detail=stop_reason_detail
             )
+
+    async def _run_backtest_loop(
+        self,
+        controller: StreamController,
+        runtime: StrategyRuntime,
+        request: UserRequest,
+    ) -> None:
+        """Fast backtest loop without sleep.
+
+        Iterates through historical data as fast as possible, advancing
+        the simulated time after each cycle without waiting.
+
+        Args:
+            controller: Stream controller for persistence
+            runtime: Strategy runtime with backtest data source
+            request: User request with configuration
+        """
+        strategy_id = runtime.strategy_id
+        data_source = runtime.backtest_data_source
+
+        if data_source is None:
+            raise ValueError("Backtest mode requires a backtest_data_source")
+
+        interval_ms = request.trading_config.decide_interval * 1000
+        total_cycles = 0
+
+        logger.info(
+            "Starting backtest loop for strategy_id={}, interval_ms={}",
+            strategy_id,
+            interval_ms,
+        )
+
+        while not data_source.is_finished() and controller.is_running():
+            result = await runtime.run_cycle()
+            total_cycles += 1
+
+            logger.info(
+                "Backtest cycle {} completed for strategy={}, progress={:.1f}%",
+                total_cycles,
+                strategy_id,
+                data_source.get_progress_pct(),
+            )
+
+            # Persist cycle results
+            controller.persist_cycle_results(result)
+
+            # Call user hook for post-cycle logic
+            try:
+                await self._on_cycle_result(result, runtime, request)
+            except Exception:
+                logger.exception(
+                    "Error in _on_cycle_result hook for strategy {}", strategy_id
+                )
+
+            # Advance simulated time (no sleep!)
+            data_source.advance_time(interval_ms)
+
+        logger.info(
+            "Backtest completed for strategy_id={}, total_cycles={}",
+            strategy_id,
+            total_cycles,
+        )
+
+    async def _run_realtime_loop(
+        self,
+        controller: StreamController,
+        runtime: StrategyRuntime,
+        request: UserRequest,
+    ) -> None:
+        """Realtime decision loop with sleep intervals.
+
+        Standard loop for live and virtual trading that waits between
+        decision cycles.
+
+        Args:
+            controller: Stream controller for persistence
+            runtime: Strategy runtime
+            request: User request with configuration
+        """
+        strategy_id = runtime.strategy_id
+
+        while controller.is_running():
+            result = await runtime.run_cycle()
+            logger.info(
+                "Run cycle completed for strategy={} trades_count={}",
+                strategy_id,
+                len(result.trades),
+            )
+
+            # Persist cycle results
+            controller.persist_cycle_results(result)
+
+            # Call user hook for post-cycle logic
+            try:
+                await self._on_cycle_result(result, runtime, request)
+            except Exception:
+                logger.exception(
+                    "Error in _on_cycle_result hook for strategy {}", strategy_id
+                )
+
+            logger.info(
+                "Waiting for next decision cycle for strategy_id={}, interval={}seconds",
+                strategy_id,
+                request.trading_config.decide_interval,
+            )
+
+            # Sleep in 1s increments so we can react to controller stop
+            # and to cancellation promptly instead of blocking for the
+            # whole interval at once.
+            for _ in range(request.trading_config.decide_interval):
+                if not controller.is_running():
+                    break
+                await asyncio.sleep(1)
 
     async def _create_runtime(
         self, request: UserRequest, strategy_id_override: str | None = None

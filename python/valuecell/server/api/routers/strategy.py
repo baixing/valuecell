@@ -91,10 +91,14 @@ def create_strategy_router() -> APIRouter:
                 if not v:
                     return None
                 v = str(v).lower()
+                if v.startswith("tradingmode."):
+                    v = v.split(".", 1)[1]
                 if v in ("live", "real", "realtime"):
                     return "live"
                 if v in ("virtual", "paper", "sim"):
                     return "virtual"
+                if v in ("backtest", "backtesting"):
+                    return "backtest"
                 return None
 
             def to_optional_float(value) -> Optional[float]:

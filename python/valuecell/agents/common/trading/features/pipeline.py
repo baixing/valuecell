@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import asyncio
 import itertools
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 from loguru import logger
 
@@ -18,6 +18,7 @@ from valuecell.agents.common.trading.models import (
     CandleConfig,
     FeaturesPipelineResult,
     FeatureVector,
+    TradingMode,
     UserRequest,
 )
 
@@ -29,6 +30,9 @@ from .interfaces import (
     CandleBasedFeatureComputer,
 )
 from .market_snapshot import MarketSnapshotFeatureComputer
+
+if TYPE_CHECKING:
+    from ..data.backtest import BacktestDataSource
 
 
 class DefaultFeaturesPipeline(BaseFeaturesPipeline):
@@ -102,11 +106,38 @@ class DefaultFeaturesPipeline(BaseFeaturesPipeline):
         return FeaturesPipelineResult(features=candle_features)
 
     @classmethod
-    def from_request(cls, request: UserRequest) -> DefaultFeaturesPipeline:
-        """Factory creating the default pipeline from a user request."""
-        market_data_source = SimpleMarketDataSource(
-            exchange_id=request.exchange_config.exchange_id
-        )
+    def from_request(
+        cls,
+        request: UserRequest,
+        backtest_data_source: Optional[BacktestDataSource] = None,
+    ) -> DefaultFeaturesPipeline:
+        """Factory creating the default pipeline from a user request.
+
+        Args:
+            request: User request with strategy configuration
+            backtest_data_source: Optional pre-configured BacktestDataSource for
+                backtest mode. If provided and trading_mode is BACKTEST, this
+                data source will be used instead of SimpleMarketDataSource.
+
+        Returns:
+            Configured DefaultFeaturesPipeline instance
+        """
+        # Use backtest data source if provided and in backtest mode
+        if (
+            backtest_data_source is not None
+            and request.exchange_config.trading_mode == TradingMode.BACKTEST
+        ):
+            market_data_source: BaseMarketDataSource = backtest_data_source
+            # For backtest, use only 1m candles to match preloaded data
+            candle_configurations = [
+                CandleConfig(interval="1m", lookback=60 * 4),
+            ]
+        else:
+            market_data_source = SimpleMarketDataSource(
+                exchange_id=request.exchange_config.exchange_id
+            )
+            candle_configurations = None  # Use defaults
+
         candle_feature_computer = SimpleCandleFeatureComputer()
         market_snapshot_computer = MarketSnapshotFeatureComputer()
         return cls(
@@ -114,4 +145,5 @@ class DefaultFeaturesPipeline(BaseFeaturesPipeline):
             market_data_source=market_data_source,
             candle_feature_computer=candle_feature_computer,
             market_snapshot_computer=market_snapshot_computer,
+            candle_configurations=candle_configurations,
         )

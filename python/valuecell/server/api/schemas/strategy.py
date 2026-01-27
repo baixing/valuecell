@@ -29,8 +29,8 @@ class StrategySummaryData(BaseModel):
     )
     status: Literal["running", "stopped"] = Field(..., description="Strategy status")
     stop_reason: Optional[str] = Field(None, description="Reason for strategy stop")
-    trading_mode: Optional[Literal["live", "virtual"]] = Field(
-        None, description="Trading mode: live or virtual"
+    trading_mode: Optional[Literal["live", "virtual", "backtest"]] = Field(
+        None, description="Trading mode: live, virtual, or backtest"
     )
     total_pnl: Optional[float] = Field(None, description="Total PnL value")
     total_pnl_pct: Optional[float] = Field(None, description="Total PnL percentage")
@@ -270,8 +270,8 @@ class StrategyPerformanceData(BaseModel):
     strategy_type: Optional[StrategyType] = Field(
         None, description="Strategy type (PromptBasedStrategy/GridStrategy)"
     )
-    trading_mode: Optional[Literal["live", "virtual"]] = Field(
-        None, description="Trading mode: live or virtual"
+    trading_mode: Optional[Literal["live", "virtual", "backtest"]] = Field(
+        None, description="Trading mode: live, virtual, or backtest"
     )
     max_leverage: Optional[float] = Field(None, description="Maximum leverage")
     symbols: Optional[List[str]] = Field(None, description="Symbols universe")

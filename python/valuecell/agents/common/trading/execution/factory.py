@@ -30,6 +30,10 @@ async def create_execution_gateway(config: ExchangeConfig) -> BaseExecutionGatew
     if config.trading_mode == TradingMode.VIRTUAL:
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
+    # Backtest mode uses paper trading gateway (simulated execution)
+    if config.trading_mode == TradingMode.BACKTEST:
+        return PaperExecutionGateway(fee_bps=config.fee_bps)
+
     # Live trading mode requires exchange credentials
     if config.trading_mode == TradingMode.LIVE:
         if not config.exchange_id:
@@ -93,6 +97,9 @@ def create_execution_gateway_sync(config: ExchangeConfig) -> BaseExecutionGatewa
     from ..models import TradingMode
 
     if config.trading_mode == TradingMode.VIRTUAL:
+        return PaperExecutionGateway(fee_bps=config.fee_bps)
+
+    if config.trading_mode == TradingMode.BACKTEST:
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
     raise RuntimeError(

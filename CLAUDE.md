@@ -10,7 +10,7 @@ ValueCell is a multi-agent platform for financial applications. It provides inve
 - **Backend**: Python 3.12+, FastAPI, Agno agents, A2A protocol
 - **Frontend**: React 19, React Router 7, Bun, TypeScript, TailwindCSS
 - **Desktop**: Tauri
-- **Database**: SQLite (conversations), LanceDB (knowledge)
+- **Database**: PostgreSQL (conversations, tasks, strategies), LanceDB (knowledge)
 
 ## Development Commands
 
@@ -138,6 +138,22 @@ Configuration loaded from system app directory:
 - Windows: `%APPDATA%\ValueCell\.env`
 
 Run `./start.sh` to auto-generate from `.env.example`.
+
+### Database Configuration
+
+The application uses PostgreSQL as the primary database. Configure via `VALUECELL_DATABASE_URL`:
+
+```bash
+# Full PostgreSQL connection string
+VALUECELL_DATABASE_URL=postgresql://user:password@localhost:5432/valuecell
+
+# Or use individual PostgreSQL environment variables
+PGHOST=localhost
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=your_password
+PGDATABASE=valuecell
+```
 
 ## Testing
 

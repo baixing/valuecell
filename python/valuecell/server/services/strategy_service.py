@@ -231,7 +231,7 @@ class StrategyService:
             trading_mode_raw = trading_mode_raw.split(".", 1)[1]
         is_live_mode = trading_mode_raw == "live"
         trading_mode: Optional[str] = (
-            trading_mode_raw if trading_mode_raw in ("live", "virtual") else None
+            trading_mode_raw if trading_mode_raw in ("live", "virtual", "backtest") else None
         )
 
         if is_live_mode:

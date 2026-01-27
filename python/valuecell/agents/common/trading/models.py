@@ -21,6 +21,7 @@ class TradingMode(str, Enum):
 
     LIVE = "live"
     VIRTUAL = "virtual"
+    BACKTEST = "backtest"
 
 
 class TradeType(str, Enum):
@@ -258,6 +259,16 @@ class TradingConfig(BaseModel):
         gt=0,
     )
     # Grid parameters are model-decided at runtime; no user-configurable grid_* fields.
+
+    # Backtest-specific fields
+    backtest_start_ts: Optional[int] = Field(
+        default=None,
+        description="Backtest start timestamp in milliseconds",
+    )
+    backtest_end_ts: Optional[int] = Field(
+        default=None,
+        description="Backtest end timestamp in milliseconds",
+    )
 
     @field_validator("symbols")
     @classmethod

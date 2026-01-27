@@ -25,6 +25,12 @@ export const createExchangeSchema = (t: TFunction) =>
       trading_mode: z.literal("virtual"),
     }),
 
+    // Backtest mode - no exchange credentials needed
+    z.object({
+      ...baseStep2Fields,
+      trading_mode: z.literal("backtest"),
+    }),
+
     // Live Trading - Hyperliquid
     z.object({
       ...baseStep2Fields,
@@ -61,8 +67,11 @@ export const createExchangeSchema = (t: TFunction) =>
   ]);
 
 // Step 3 Schema: Trading Strategy
-export const createTradingStrategySchema = (t: TFunction) =>
-  z.object({
+export const createTradingStrategySchema = (
+  t: TFunction,
+  tradingMode: "live" | "virtual" | "backtest" = "live",
+) => {
+  const baseSchema = z.object({
     strategy_type: z.enum(["PromptBasedStrategy", "GridStrategy"]),
     strategy_name: z
       .string()
@@ -80,7 +89,27 @@ export const createTradingStrategySchema = (t: TFunction) =>
       .number()
       .min(10, t("validation.trading.decideIntervalMin"))
       .max(3600, t("validation.trading.decideIntervalMax")),
+    backtest_start_ts: z.number().optional(),
+    backtest_end_ts: z.number().optional(),
   });
+
+  if (tradingMode === "backtest") {
+    return baseSchema.refine(
+      (data) => {
+        if (!data.backtest_start_ts || !data.backtest_end_ts) {
+          return false;
+        }
+        return data.backtest_start_ts < data.backtest_end_ts;
+      },
+      {
+        message: t("validation.trading.backtestTimeRangeInvalid"),
+        path: ["backtest_end_ts"],
+      },
+    );
+  }
+
+  return baseSchema;
+};
 
 export const createCopyTradingStrategySchema = (t: TFunction) =>
   z.object({

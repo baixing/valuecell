@@ -7,7 +7,15 @@
       "Bash(git push:*)",
       "Bash(grep:*)",
       "Bash(curl:*)",
-      "mcp__playwright"
+      "mcp__playwright",
+      "WebSearch",
+      "Bash(cat:*)",
+      "Bash(uv run pytest:*)",
+      "Bash(tree:*)",
+      "Bash(bun run typecheck)",
+      "Bash(ls:*)",
+      "Bash(bun run check)",
+      "Bash(bun run check:fix)"
     ]
   }
 }
