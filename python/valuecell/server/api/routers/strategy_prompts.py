@@ -4,7 +4,9 @@ Provides minimal endpoints to list and create strategy prompts.
 Design: simple, no versioning, permissions, or pagination.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from valuecell.server.api.schemas.base import SuccessResponse
@@ -31,19 +33,24 @@ def create_strategy_prompts_router() -> APIRouter:
         "",
         response_model=PromptListResponse,
         summary="List strategy prompts",
-        description="Return all available strategy prompts (unordered by recency).",
+        description="Return all available strategy prompts, optionally filtered by asset_class.",
     )
     @router.get(
         "/",
         response_model=PromptListResponse,
         summary="List strategy prompts",
-        description="Return all available strategy prompts (unordered by recency).",
+        description="Return all available strategy prompts, optionally filtered by asset_class.",
         include_in_schema=False,  # 避免重复文档
     )
-    async def list_prompts(db: Session = Depends(get_db)) -> PromptListResponse:
+    async def list_prompts(
+        asset_class: Optional[str] = Query(
+            None, description="Filter by asset class: crypto or stock"
+        ),
+        db: Session = Depends(get_db),
+    ) -> PromptListResponse:
         try:
             repo = get_strategy_repository(db_session=db)
-            items = repo.list_prompts()
+            items = repo.list_prompts(asset_class=asset_class)
             prompt_items = [PromptItem(**p.to_dict()) for p in items]
             return SuccessResponse.create(
                 data=prompt_items, msg=f"Fetched {len(prompt_items)} prompts"
@@ -57,14 +64,18 @@ def create_strategy_prompts_router() -> APIRouter:
         "/create",
         response_model=PromptCreateResponse,
         summary="Create a strategy prompt",
-        description="Create a new strategy prompt with name and content.",
+        description="Create a new strategy prompt with name, content, and asset_class.",
     )
     async def create_prompt(
         payload: PromptCreateRequest, db: Session = Depends(get_db)
     ) -> PromptCreateResponse:
         try:
             repo = get_strategy_repository(db_session=db)
-            item = repo.create_prompt(name=payload.name, content=payload.content)
+            item = repo.create_prompt(
+                name=payload.name,
+                content=payload.content,
+                asset_class=payload.asset_class,
+            )
             if item is None:
                 raise HTTPException(status_code=500, detail="Failed to create prompt")
             return SuccessResponse.create(

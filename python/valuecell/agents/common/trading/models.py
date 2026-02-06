@@ -149,6 +149,13 @@ class MarginMode(str, Enum):
     CROSS = "cross"  # Cross margin
 
 
+class AssetClass(str, Enum):
+    """Asset class for trading."""
+
+    CRYPTO = "crypto"  # Cryptocurrency (default, uses CCXT)
+    STOCK = "stock"  # US stocks (uses YFinance for paper trading)
+
+
 class ExchangeConfig(BaseModel):
     """Exchange configuration for trading."""
 
@@ -192,6 +199,10 @@ class ExchangeConfig(BaseModel):
         default=10.0,
         description="Trading fee in basis points (default 10 bps = 0.1%) for paper trading",
         gt=0,
+    )
+    asset_class: AssetClass = Field(
+        default=AssetClass.CRYPTO,
+        description="Asset class: crypto (default) or stock",
     )
 
 

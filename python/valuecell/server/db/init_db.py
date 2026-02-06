@@ -585,6 +585,51 @@ class DatabaseInitializer:
                         pass
                     logger.error("Failed to insert aggressive strategy prompt: %s", e)
 
+                # Insert stock_default strategy prompt from template if not present
+                try:
+                    stock_default_path = (
+                        Path(__file__).resolve().parents[2]
+                        / "agents"
+                        / "prompt_strategy_agent"
+                        / "templates"
+                        / "stock_default.txt"
+                    )
+                    stock_default_id = "prompt-system-stock-default"
+                    stock_default_existing = (
+                        session.query(StrategyPrompt)
+                        .filter(StrategyPrompt.id == stock_default_id)
+                        .first()
+                    )
+                    if not stock_default_existing:
+                        if stock_default_path.exists():
+                            stock_default_content = stock_default_path.read_text(
+                                encoding="utf-8"
+                            )
+                            stock_default_prompt = StrategyPrompt(
+                                id=stock_default_id,
+                                name="All-Weather Portfolio (US Stocks)",
+                                content=stock_default_content,
+                                asset_class="stock",
+                            )
+                            session.add(stock_default_prompt)
+                            session.commit()
+                            logger.info(
+                                "Inserted stock_default strategy prompt: %s",
+                                stock_default_id,
+                            )
+                        else:
+                            logger.warning(
+                                "Stock default strategy prompt template not found: %s",
+                                stock_default_path,
+                            )
+                except Exception as e:
+                    # Do not fail the whole DB init for prompt insertion; log and continue
+                    try:
+                        session.rollback()
+                    except Exception:
+                        pass
+                    logger.error("Failed to insert stock_default strategy prompt: %s", e)
+
                 logger.info("Default agent data initialization completed")
                 return True
 

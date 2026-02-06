@@ -1,7 +1,7 @@
 import { useStore } from "@tanstack/react-form";
 import { AlertCircleIcon } from "lucide-react";
 import type { FC, RefObject } from "react";
-import { memo, useImperativeHandle, useMemo, useState } from "react";
+import { memo, useEffect, useImperativeHandle, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useGetModelProviderDetail } from "@/api/setting";
 import {
@@ -27,15 +27,25 @@ import {
 } from "@/components/valuecell/form/exchange-form";
 import { TradingStrategyForm } from "@/components/valuecell/form/trading-strategy-form";
 import { StepIndicator } from "@/components/valuecell/step-indicator";
-import { TRADING_SYMBOLS } from "@/constants/agent";
+import {
+  CRYPTO_TRADING_SYMBOLS,
+  STOCK_TRADING_SYMBOLS,
+  TRADING_SYMBOLS,
+} from "@/constants/agent";
 import {
   createAiModelSchema,
   createExchangeSchema,
   createTradingStrategySchema,
+  SECONDS_PER_DAY,
 } from "@/constants/schema";
 import { useAppForm } from "@/hooks/use-form";
 import { tracker } from "@/lib/tracker";
-import type { CreateStrategy, Strategy, TradingMode } from "@/types/strategy";
+import type {
+  AssetClass,
+  CreateStrategy,
+  Strategy,
+  TradingMode,
+} from "@/types/strategy";
 
 export interface CreateStrategyModelRef {
   open: (data?: CreateStrategy) => void;
@@ -62,7 +72,6 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
     { step: 3, title: t("strategy.create.steps.tradingStrategy") },
   ];
 
-  const { data: prompts = [] } = useGetStrategyPrompts();
   const { data: strategies = [] } = useGetStrategyList();
   const { mutateAsync: createStrategy, isPending: isCreatingStrategy } =
     useCreateStrategy();
@@ -89,6 +98,7 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
   const form2 = useAppForm({
     defaultValues: {
       trading_mode: "live" as TradingMode,
+      asset_class: "crypto" as AssetClass,
       exchange_id: "okx",
       api_key: "",
       secret_key: "",
@@ -124,9 +134,39 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       }
 
       form3.setFieldValue("strategy_name", newName);
+
+      // Set default symbols based on asset class
+      const { asset_class } = form2.state.values;
+      const defaultSymbols =
+        asset_class === "stock" ? STOCK_TRADING_SYMBOLS : CRYPTO_TRADING_SYMBOLS;
+      form3.setFieldValue("symbols", defaultSymbols);
+
+      // Reset template_id when asset class changes (prompts are filtered by asset class)
+      form3.setFieldValue("template_id", "");
+
+      // Set default decide_interval based on asset class
+      // Crypto: 60 seconds, Stock: 1 day
+      const defaultDecideInterval = asset_class === "stock" ? 1 : 60;
+      form3.setFieldValue("decide_interval", defaultDecideInterval);
+
       setCurrentStep(3);
     },
   });
+
+  // Get asset class from form2 for filtering prompts
+  const assetClass = useStore(
+    form2.store,
+    (state) => state.values.asset_class,
+  );
+
+  // Get prompts filtered by asset class when in virtual/backtest mode
+  const tradingModeForPrompts = useStore(
+    form2.store,
+    (state) => state.values.trading_mode,
+  );
+  const { data: prompts = [] } = useGetStrategyPrompts(
+    tradingModeForPrompts !== "live" ? assetClass : undefined,
+  );
 
   // Get trading mode for schema validation
   const tradingMode = useStore(
@@ -134,10 +174,10 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
     (state) => state.values.trading_mode,
   );
 
-  // Create trading strategy schema with trading mode
+  // Create trading strategy schema with trading mode and asset class
   const tradingStrategySchema = useMemo(
-    () => createTradingStrategySchema(t, tradingMode),
-    [t, tradingMode],
+    () => createTradingStrategySchema(t, tradingMode, assetClass),
+    [t, tradingMode, assetClass],
   );
 
   // Step 3 Form: Trading Strategy
@@ -149,7 +189,7 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       max_leverage: 2,
       decide_interval: 60,
       symbols: TRADING_SYMBOLS,
-      template_id: prompts.length > 0 ? prompts[0].id : "",
+      template_id: "",
       backtest_start_ts: undefined as number | undefined,
       backtest_end_ts: undefined as number | undefined,
     },
@@ -157,10 +197,20 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       onSubmit: tradingStrategySchema,
     },
     onSubmit: async ({ value }) => {
+      // Convert decide_interval from days to seconds for stock asset class
+      const { asset_class } = form2.state.values;
+      const decideIntervalInSeconds =
+        asset_class === "stock"
+          ? value.decide_interval * SECONDS_PER_DAY
+          : value.decide_interval;
+
       const payload = {
         llm_model_config: form1.state.values,
         exchange_config: form2.state.values,
-        trading_config: value,
+        trading_config: {
+          ...value,
+          decide_interval: decideIntervalInSeconds,
+        },
       };
 
       const { code, msg } = await createStrategy(payload);
@@ -173,6 +223,17 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
       resetAll();
     },
   });
+
+  // Auto-select first prompt when prompts are loaded and template_id is empty
+  useEffect(() => {
+    if (
+      currentStep === 3 &&
+      prompts.length > 0 &&
+      !form3.state.values.template_id
+    ) {
+      form3.setFieldValue("template_id", prompts[0].id);
+    }
+  }, [currentStep, prompts, form3.state.values.template_id]);
 
   const resetAll = () => {
     setCurrentStep(1);
@@ -234,6 +295,7 @@ const CreateStrategyModal: FC<CreateStrategyModalProps> = ({
               form={form3}
               prompts={prompts}
               tradingMode={form2.state.values.trading_mode}
+              assetClass={form2.state.values.asset_class}
             />
           )}
         </div>

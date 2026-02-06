@@ -118,11 +118,12 @@ const getPlaceholder = (
   return "";
 };
 
-import type { TradingMode } from "@/types/strategy";
+import type { AssetClass, TradingMode } from "@/types/strategy";
 
 export const ExchangeForm = withForm({
   defaultValues: {
     trading_mode: "live" as TradingMode,
+    asset_class: "crypto" as AssetClass,
     exchange_id: "",
     api_key: "",
     secret_key: "",
@@ -166,6 +167,10 @@ export const ExchangeForm = withForm({
               form.setFieldValue("passphrase", "");
               form.setFieldValue("wallet_address", "");
               form.setFieldValue("private_key", "");
+              // Reset asset_class to crypto when switching to live mode
+              if (value === "live") {
+                form.setFieldValue("asset_class", "crypto");
+              }
             },
           }}
           name="trading_mode"
@@ -195,6 +200,34 @@ export const ExchangeForm = withForm({
             </field.RadioField>
           )}
         </form.AppField>
+
+        {/* Asset Class selection - only shown in Virtual/Backtest mode */}
+        <form.Subscribe selector={(state) => state.values.trading_mode}>
+          {(tradingMode) =>
+            (tradingMode === "virtual" || tradingMode === "backtest") && (
+              <form.AppField name="asset_class">
+                {(field) => (
+                  <field.RadioField
+                    label={t("strategy.form.exchanges.assetClass")}
+                  >
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="crypto" id="asset-crypto" />
+                      <Label htmlFor="asset-crypto" className="text-sm">
+                        {t("strategy.form.exchanges.cryptocurrency")}
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <RadioGroupItem value="stock" id="asset-stock" />
+                      <Label htmlFor="asset-stock" className="text-sm">
+                        {t("strategy.form.exchanges.usStocks")}
+                      </Label>
+                    </div>
+                  </field.RadioField>
+                )}
+              </form.AppField>
+            )
+          }
+        </form.Subscribe>
 
         <form.Subscribe selector={(state) => state.values.trading_mode}>
           {(tradingMode) => {

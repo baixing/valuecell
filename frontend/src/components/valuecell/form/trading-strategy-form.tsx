@@ -32,9 +32,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TRADING_SYMBOLS } from "@/constants/agent";
+import {
+  CRYPTO_TRADING_SYMBOLS,
+  STOCK_TRADING_SYMBOLS,
+  TRADING_SYMBOLS,
+} from "@/constants/agent";
+import { DECIDE_INTERVAL_LIMITS } from "@/constants/schema";
 import { withForm } from "@/hooks/use-form";
-import type { Strategy, StrategyPrompt, TradingMode } from "@/types/strategy";
+import type {
+  AssetClass,
+  Strategy,
+  StrategyPrompt,
+  TradingMode,
+} from "@/types/strategy";
+
+// Default decide_interval values based on asset class
+// Crypto: 60 seconds, Stock: 1 day
+const DEFAULT_DECIDE_INTERVAL = {
+  crypto: 60,
+  stock: 1,
+} as const;
 
 export const TradingStrategyForm = withForm({
   defaultValues: {
@@ -51,13 +68,18 @@ export const TradingStrategyForm = withForm({
   props: {
     prompts: [] as StrategyPrompt[],
     tradingMode: "live" as TradingMode,
+    assetClass: "crypto" as AssetClass,
   },
-  render({ form, prompts, tradingMode }) {
+  render({ form, prompts, tradingMode, assetClass }) {
     const { t } = useTranslation();
     const { mutateAsync: createStrategyPrompt } = useCreateStrategyPrompt();
     const { mutate: deleteStrategyPrompt } = useDeleteStrategyPrompt();
     const [deletePromptId, setDeletePromptId] = useState<string | null>(null);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+    // Get symbols based on asset class
+    const defaultSymbols =
+      assetClass === "stock" ? STOCK_TRADING_SYMBOLS : CRYPTO_TRADING_SYMBOLS;
 
     const handleDeletePrompt = (promptId: string) => {
       setDeletePromptId(promptId);
@@ -94,9 +116,9 @@ export const TradingStrategyForm = withForm({
           listeners={{
             onChange: ({ value }: { value: Strategy["strategy_type"] }) => {
               if (value === "GridStrategy") {
-                form.setFieldValue("symbols", [TRADING_SYMBOLS[0]]);
+                form.setFieldValue("symbols", [defaultSymbols[0]]);
               } else {
-                form.setFieldValue("symbols", TRADING_SYMBOLS);
+                form.setFieldValue("symbols", defaultSymbols);
               }
             },
           }}
@@ -107,9 +129,12 @@ export const TradingStrategyForm = withForm({
               <SelectItem value="PromptBasedStrategy">
                 {t("strategy.form.strategyType.promptBased")}
               </SelectItem>
-              <SelectItem value="GridStrategy">
-                {t("strategy.form.strategyType.grid")}
-              </SelectItem>
+              {/* Hide GridStrategy for US Stocks */}
+              {assetClass !== "stock" && (
+                <SelectItem value="GridStrategy">
+                  {t("strategy.form.strategyType.grid")}
+                </SelectItem>
+              )}
             </field.SelectField>
           )}
         </form.AppField>
@@ -169,12 +194,27 @@ export const TradingStrategyForm = withForm({
         )}
 
         <form.AppField name="decide_interval">
-          {(field) => (
-            <field.NumberField
-              label={t("strategy.form.decideInterval.label")}
-              placeholder={t("strategy.form.decideInterval.placeholder")}
-            />
-          )}
+          {(field) => {
+            const isStock = assetClass === "stock";
+            const limits = DECIDE_INTERVAL_LIMITS[assetClass];
+            return (
+              <field.NumberField
+                label={
+                  isStock
+                    ? t("strategy.form.decideInterval.labelDays")
+                    : t("strategy.form.decideInterval.label")
+                }
+                placeholder={
+                  isStock
+                    ? t("strategy.form.decideInterval.placeholderDays", {
+                        min: limits.min,
+                        max: limits.max,
+                      })
+                    : t("strategy.form.decideInterval.placeholder")
+                }
+              />
+            );
+          }}
         </form.AppField>
 
         <form.Subscribe selector={(state) => state.values.strategy_type}>
@@ -190,7 +230,7 @@ export const TradingStrategyForm = withForm({
                       maxSelected={
                         strategyType === "GridStrategy" ? 1 : undefined
                       }
-                      options={TRADING_SYMBOLS}
+                      options={defaultSymbols}
                       value={field.state.value}
                       onValueChange={(value) => field.handleChange(value)}
                       placeholder={t(
@@ -257,9 +297,13 @@ export const TradingStrategyForm = withForm({
                                 </SelectItem>
                               ))}
                             <NewPromptModal
+                              assetClass={assetClass}
                               onSave={async (value) => {
                                 const { data: prompt } =
-                                  await createStrategyPrompt(value);
+                                  await createStrategyPrompt({
+                                    ...value,
+                                    asset_class: assetClass,
+                                  });
                                 form.setFieldValue("template_id", prompt.id);
                               }}
                             >

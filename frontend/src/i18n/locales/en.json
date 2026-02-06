@@ -262,7 +262,9 @@
       },
       "decideInterval": {
         "label": "Decision Interval (seconds)",
-        "placeholder": "e.g. 300"
+        "placeholder": "e.g. 300",
+        "labelDays": "Decision Interval (days)",
+        "placeholderDays": "{{min}}-{{max}} days"
       },
       "tradingSymbols": {
         "label": "Trading Symbols",
@@ -293,6 +295,9 @@
         "liveTrading": "Live Trading",
         "virtualTrading": "Virtual Trading",
         "backtesting": "Backtesting",
+        "assetClass": "Asset Class",
+        "cryptocurrency": "Cryptocurrency",
+        "usStocks": "US Stocks",
         "selectExchange": "Select Exchange",
         "walletAddress": "Wallet Address",
         "privateKey": "Private Key",
@@ -461,6 +466,8 @@
       "templateRequired": "Prompt template is required",
       "decideIntervalMin": "Decision interval must be at least 10 seconds",
       "decideIntervalMax": "Decision interval cannot exceed 3600 seconds",
+      "decideIntervalMinDays": "Decision interval must be at least 1 day",
+      "decideIntervalMaxDays": "Decision interval cannot exceed 60 days",
       "backtestTimeRangeInvalid": "Backtest end time must be after start time"
     },
     "copy": {

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from .ccxt_trading import CCXTExecutionGateway
 from .interfaces import BaseExecutionGateway
 from .paper_trading import PaperExecutionGateway
+from .stock_paper_trading import StockPaperExecutionGateway
 
 
 async def create_execution_gateway(config: ExchangeConfig) -> BaseExecutionGateway:
@@ -19,23 +20,41 @@ async def create_execution_gateway(config: ExchangeConfig) -> BaseExecutionGatew
         config: Exchange configuration with trading mode and credentials
 
     Returns:
-        ExecutionGateway instance (paper or real CCXT gateway)
+        ExecutionGateway instance (paper, stock paper, or real CCXT gateway)
 
     Raises:
         ValueError: If configuration is invalid for the requested trading mode
     """
-    from ..models import TradingMode
+    from ..models import AssetClass, TradingMode
+
+    # Check if this is a stock asset class
+    is_stock = getattr(config, "asset_class", None) == AssetClass.STOCK
 
     # Virtual/paper trading mode
     if config.trading_mode == TradingMode.VIRTUAL:
+        if is_stock:
+            return StockPaperExecutionGateway(fee_bps=config.fee_bps)
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
     # Backtest mode uses paper trading gateway (simulated execution)
     if config.trading_mode == TradingMode.BACKTEST:
+        if is_stock:
+            return StockPaperExecutionGateway(
+                fee_bps=config.fee_bps,
+                enforce_market_hours=False,  # Allow backtesting outside market hours
+            )
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
     # Live trading mode requires exchange credentials
     if config.trading_mode == TradingMode.LIVE:
+        # Stock live trading is not supported yet (requires broker integration)
+        if is_stock:
+            raise ValueError(
+                "Live trading for stocks is not supported yet. "
+                "Please use VIRTUAL mode for stock paper trading, or integrate a broker "
+                "(e.g., Alpaca, Interactive Brokers) for live stock trading."
+            )
+
         if not config.exchange_id:
             raise ValueError(
                 "exchange_id is required for live trading mode. "
@@ -94,12 +113,22 @@ def create_execution_gateway_sync(config: ExchangeConfig) -> BaseExecutionGatewa
     Raises:
         RuntimeError: If live trading is requested (requires async initialization)
     """
-    from ..models import TradingMode
+    from ..models import AssetClass, TradingMode
+
+    # Check if this is a stock asset class
+    is_stock = getattr(config, "asset_class", None) == AssetClass.STOCK
 
     if config.trading_mode == TradingMode.VIRTUAL:
+        if is_stock:
+            return StockPaperExecutionGateway(fee_bps=config.fee_bps)
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
     if config.trading_mode == TradingMode.BACKTEST:
+        if is_stock:
+            return StockPaperExecutionGateway(
+                fee_bps=config.fee_bps,
+                enforce_market_hours=False,
+            )
         return PaperExecutionGateway(fee_bps=config.fee_bps)
 
     raise RuntimeError(

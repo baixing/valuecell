@@ -1,4 +1,5 @@
 import { MultiSelect } from "@valuecell/multi-select";
+import { useTranslation } from "react-i18next";
 import {
   Field,
   FieldError,
@@ -6,9 +7,14 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { SelectItem } from "@/components/ui/select";
-import { TRADING_SYMBOLS } from "@/constants/agent";
+import {
+  CRYPTO_TRADING_SYMBOLS,
+  STOCK_TRADING_SYMBOLS,
+  TRADING_SYMBOLS,
+} from "@/constants/agent";
+import { DECIDE_INTERVAL_LIMITS } from "@/constants/schema";
 import { withForm } from "@/hooks/use-form";
-import type { Strategy } from "@/types/strategy";
+import type { AssetClass, Strategy } from "@/types/strategy";
 
 export const CopyStrategyForm = withForm({
   defaultValues: {
@@ -23,28 +29,39 @@ export const CopyStrategyForm = withForm({
   },
   props: {
     tradingMode: "live" as "live" | "virtual",
+    assetClass: "crypto" as AssetClass,
   },
-  render({ form, tradingMode }) {
+  render({ form, tradingMode, assetClass }) {
+    const { t } = useTranslation();
+
+    // Get symbols based on asset class
+    const defaultSymbols =
+      assetClass === "stock" ? STOCK_TRADING_SYMBOLS : CRYPTO_TRADING_SYMBOLS;
     return (
       <FieldGroup className="gap-6">
         <form.AppField
           listeners={{
             onChange: ({ value }: { value: Strategy["strategy_type"] }) => {
               if (value === "GridStrategy") {
-                form.setFieldValue("symbols", [TRADING_SYMBOLS[0]]);
+                form.setFieldValue("symbols", [defaultSymbols[0]]);
               } else {
-                form.setFieldValue("symbols", TRADING_SYMBOLS);
+                form.setFieldValue("symbols", defaultSymbols);
               }
             },
           }}
           name="strategy_type"
         >
           {(field) => (
-            <field.SelectField label="Strategy Type">
+            <field.SelectField label={t("strategy.form.strategyType.label")}>
               <SelectItem value="PromptBasedStrategy">
-                Prompt Based Strategy
+                {t("strategy.form.strategyType.promptBased")}
               </SelectItem>
-              <SelectItem value="GridStrategy">Grid Strategy</SelectItem>
+              {/* Hide GridStrategy for US Stocks */}
+              {assetClass !== "stock" && (
+                <SelectItem value="GridStrategy">
+                  {t("strategy.form.strategyType.grid")}
+                </SelectItem>
+              )}
             </field.SelectField>
           )}
         </form.AppField>
@@ -52,8 +69,8 @@ export const CopyStrategyForm = withForm({
         <form.AppField name="strategy_name">
           {(field) => (
             <field.TextField
-              label="Strategy Name"
-              placeholder="Enter strategy name"
+              label={t("strategy.form.strategyName.label")}
+              placeholder={t("strategy.form.strategyName.placeholder")}
             />
           )}
         </form.AppField>
@@ -64,8 +81,8 @@ export const CopyStrategyForm = withForm({
               {(field) => (
                 <field.NumberField
                   className="flex-1"
-                  label="Initial Capital"
-                  placeholder="Enter Initial Capital"
+                  label={t("strategy.form.initialCapital.label")}
+                  placeholder={t("strategy.form.initialCapital.placeholder")}
                 />
               )}
             </form.AppField>
@@ -75,20 +92,35 @@ export const CopyStrategyForm = withForm({
             {(field) => (
               <field.NumberField
                 className="flex-1"
-                label="Max Leverage"
-                placeholder="Max Leverage"
+                label={t("strategy.form.maxLeverage.label")}
+                placeholder={t("strategy.form.maxLeverage.placeholder")}
               />
             )}
           </form.AppField>
         </FieldGroup>
 
         <form.AppField name="decide_interval">
-          {(field) => (
-            <field.NumberField
-              label="Decision Interval (seconds)"
-              placeholder="e.g. 300"
-            />
-          )}
+          {(field) => {
+            const isStock = assetClass === "stock";
+            const limits = DECIDE_INTERVAL_LIMITS[assetClass];
+            return (
+              <field.NumberField
+                label={
+                  isStock
+                    ? t("strategy.form.decideInterval.labelDays")
+                    : t("strategy.form.decideInterval.label")
+                }
+                placeholder={
+                  isStock
+                    ? t("strategy.form.decideInterval.placeholderDays", {
+                        min: limits.min,
+                        max: limits.max,
+                      })
+                    : t("strategy.form.decideInterval.placeholder")
+                }
+              />
+            );
+          }}
         </form.AppField>
 
         <form.Subscribe selector={(state) => state.values.strategy_type}>
@@ -98,18 +130,20 @@ export const CopyStrategyForm = withForm({
                 {(field) => (
                   <Field>
                     <FieldLabel className="font-medium text-base text-foreground">
-                      Trading Symbols
+                      {t("strategy.form.tradingSymbols.label")}
                     </FieldLabel>
                     <MultiSelect
                       maxSelected={
                         strategyType === "GridStrategy" ? 1 : undefined
                       }
-                      options={TRADING_SYMBOLS}
+                      options={defaultSymbols}
                       value={field.state.value}
                       onValueChange={(value) => field.handleChange(value)}
-                      placeholder="Select trading symbols..."
-                      searchPlaceholder="Search or add symbols..."
-                      emptyText="No symbols found."
+                      placeholder={t("strategy.form.tradingSymbols.placeholder")}
+                      searchPlaceholder={t(
+                        "strategy.form.tradingSymbols.searchPlaceholder",
+                      )}
+                      emptyText={t("strategy.form.tradingSymbols.emptyText")}
                       maxDisplayed={5}
                       creatable
                     />
@@ -129,7 +163,7 @@ export const CopyStrategyForm = withForm({
                   {(field) => (
                     <Field>
                       <FieldLabel className="font-medium text-base text-foreground">
-                        System Prompt Template
+                        {t("strategy.form.promptTemplate.label")}
                       </FieldLabel>
                       <div className="text-muted-foreground text-sm">
                         {field.state.value}

@@ -15,6 +15,7 @@ from typing import TYPE_CHECKING, List, Optional
 from loguru import logger
 
 from valuecell.agents.common.trading.models import (
+    AssetClass,
     CandleConfig,
     FeaturesPipelineResult,
     FeatureVector,
@@ -24,6 +25,7 @@ from valuecell.agents.common.trading.models import (
 
 from ..data.interfaces import BaseMarketDataSource
 from ..data.market import SimpleMarketDataSource
+from ..data.stock import StockMarketDataSource
 from .candle import SimpleCandleFeatureComputer
 from .interfaces import (
     BaseFeaturesPipeline,
@@ -33,6 +35,7 @@ from .market_snapshot import MarketSnapshotFeatureComputer
 
 if TYPE_CHECKING:
     from ..data.backtest import BacktestDataSource
+    from ..data.stock_backtest import StockBacktestDataSource
 
 
 class DefaultFeaturesPipeline(BaseFeaturesPipeline):
@@ -109,15 +112,19 @@ class DefaultFeaturesPipeline(BaseFeaturesPipeline):
     def from_request(
         cls,
         request: UserRequest,
-        backtest_data_source: Optional[BacktestDataSource] = None,
+        backtest_data_source: Optional[
+            BacktestDataSource | StockBacktestDataSource
+        ] = None,
     ) -> DefaultFeaturesPipeline:
         """Factory creating the default pipeline from a user request.
 
         Args:
             request: User request with strategy configuration
-            backtest_data_source: Optional pre-configured BacktestDataSource for
-                backtest mode. If provided and trading_mode is BACKTEST, this
-                data source will be used instead of SimpleMarketDataSource.
+            backtest_data_source: Optional pre-configured backtest data source for
+                backtest mode. Accepts BacktestDataSource (crypto/CCXT) or
+                StockBacktestDataSource (US stocks/YFinance). If provided and
+                trading_mode is BACKTEST, this data source will be used instead
+                of SimpleMarketDataSource.
 
         Returns:
             Configured DefaultFeaturesPipeline instance
@@ -128,7 +135,21 @@ class DefaultFeaturesPipeline(BaseFeaturesPipeline):
             and request.exchange_config.trading_mode == TradingMode.BACKTEST
         ):
             market_data_source: BaseMarketDataSource = backtest_data_source
-            # For backtest, use only 1m candles to match preloaded data
+            is_stock = request.exchange_config.asset_class == AssetClass.STOCK
+            if is_stock:
+                # US stock backtest: daily candles, 240 trading days lookback
+                candle_configurations = [
+                    CandleConfig(interval="1d", lookback=240),
+                ]
+            else:
+                # Crypto backtest: 1-minute candles
+                candle_configurations = [
+                    CandleConfig(interval="1m", lookback=60 * 4),
+                ]
+        # Use stock market data source for US stocks
+        elif request.exchange_config.asset_class == AssetClass.STOCK:
+            market_data_source = StockMarketDataSource()
+            # YFinance minimum granularity is 1m, no 1s data available
             candle_configurations = [
                 CandleConfig(interval="1m", lookback=60 * 4),
             ]

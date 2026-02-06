@@ -112,11 +112,28 @@ export const VALUECELL_AGENT: AgentInfo = {
   },
 };
 
-// Trading symbols options
-export const TRADING_SYMBOLS: string[] = [
+// Crypto trading symbols
+export const CRYPTO_TRADING_SYMBOLS: string[] = [
   "BTC/USDT",
   "ETH/USDT",
   "SOL/USDT",
   "DOGE/USDT",
   "XRP/USDT",
 ];
+
+// US Stock ETF symbols (All-Weather Portfolio)
+export const STOCK_TRADING_SYMBOLS: string[] = [
+  "QQQ", // Nasdaq 100
+  "SPY", // S&P 500
+  "BRK-B", // Berkshire
+  "IWM", // Russell 2000
+  "GLD", // Gold
+  "SLV", // Silver
+  "IBIT", // Bitcoin ETF
+  "DBC", // Commodities
+  "SHY", // Short-term Bonds
+  "IEF", // Medium-term Bonds
+];
+
+// Backward compatible alias
+export const TRADING_SYMBOLS = CRYPTO_TRADING_SYMBOLS;

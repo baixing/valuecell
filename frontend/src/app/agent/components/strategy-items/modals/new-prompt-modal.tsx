@@ -23,6 +23,7 @@ import CloseButton from "@/components/valuecell/button/close-button";
 interface NewPromptModalProps {
   onSave: (value: { name: string; content: string }) => void;
   children: React.ReactNode;
+  assetClass?: "crypto" | "stock";
 }
 
 // Schema for form validation
@@ -31,7 +32,11 @@ const promptSchema = z.object({
   content: z.string().min(1, "Prompt content is required"),
 });
 
-const NewPromptModal: FC<NewPromptModalProps> = ({ onSave, children }) => {
+const NewPromptModal: FC<NewPromptModalProps> = ({
+  onSave,
+  children,
+  assetClass = "crypto",
+}) => {
   const [open, setOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 

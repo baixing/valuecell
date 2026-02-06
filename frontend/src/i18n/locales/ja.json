@@ -260,7 +260,9 @@
       },
       "decideInterval": {
         "label": "決定間隔 (秒)",
-        "placeholder": "例: 300"
+        "placeholder": "例: 300",
+        "labelDays": "決定間隔 (日)",
+        "placeholderDays": "{{min}}-{{max}} 日"
       },
       "tradingSymbols": {
         "label": "取引ペア",
@@ -286,6 +288,10 @@
         "transactionType": "取引タイプ",
         "liveTrading": "ライブ取引",
         "virtualTrading": "バーチャル取引",
+        "backtesting": "バックテスト",
+        "assetClass": "資産クラス",
+        "cryptocurrency": "暗号通貨",
+        "usStocks": "米国株",
         "selectExchange": "取引所を選択",
         "walletAddress": "ウォレットアドレス",
         "privateKey": "秘密鍵",

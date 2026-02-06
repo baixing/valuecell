@@ -420,13 +420,46 @@ class BaseStrategyAgent(BaseAgent, ABC):
                 request.trading_config.decide_interval,
             )
 
-            # Sleep in 1s increments so we can react to controller stop
-            # and to cancellation promptly instead of blocking for the
-            # whole interval at once.
-            for _ in range(request.trading_config.decide_interval):
-                if not controller.is_running():
-                    break
-                await asyncio.sleep(1)
+            # Sleep with periodic controller checks to react to stop requests.
+            # Use adaptive sleep intervals: check more frequently for short intervals,
+            # less frequently for long intervals (e.g., days for stock trading).
+            await self._interruptible_sleep(
+                controller, request.trading_config.decide_interval
+            )
+
+    async def _interruptible_sleep(
+        self, controller: StreamController, total_seconds: int
+    ) -> None:
+        """Sleep for total_seconds while periodically checking controller status.
+
+        Uses adaptive check intervals:
+        - For short intervals (<= 60s): check every 1 second
+        - For medium intervals (<= 3600s): check every 10 seconds
+        - For long intervals (> 3600s): check every 60 seconds
+
+        This avoids excessive loop iterations for long intervals (e.g., 15 days)
+        while still allowing prompt response to stop requests.
+
+        Args:
+            controller: Stream controller to check for stop requests
+            total_seconds: Total time to sleep in seconds
+        """
+        if total_seconds <= 0:
+            return
+
+        # Determine check interval based on total sleep time
+        if total_seconds <= 60:
+            check_interval = 1
+        elif total_seconds <= 3600:
+            check_interval = 10
+        else:
+            check_interval = 60
+
+        remaining = total_seconds
+        while remaining > 0 and controller.is_running():
+            sleep_time = min(remaining, check_interval)
+            await asyncio.sleep(sleep_time)
+            remaining -= sleep_time
 
     async def _create_runtime(
         self, request: UserRequest, strategy_id_override: str | None = None

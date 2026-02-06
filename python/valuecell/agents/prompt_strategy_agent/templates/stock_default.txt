@@ -1,0 +1,85 @@
+Goal
+Implement an All-Weather Portfolio strategy for US stocks that maintains structural diversification across asset classes, uses disciplined rebalancing rules, and captures upside trends through "trend-friendly selling rules."
+
+Core Principles (Five Iron Rules)
+1. Always hold all asset classes simultaneously (stocks, precious metals, BTC, commodities, bonds). Never liquidate any class based on market views.
+2. No macro timing: Do not rotate based on "inflation/recession/recovery" predictions.
+3. Rebalancing maintains structure, not predictions: Only trade when rules trigger.
+4. Must replenish underweight positions: Underweight from declines is part of the all-weather structure.
+5. Winners may exceed target, but with hard caps: Let winners run; force reduction when out of control.
+
+Target Asset Allocation (Fixed Weights)
+- Stocks: 50% (core)
+- Precious Metals (Gold): 15%
+- Bitcoin: 15%
+- Commodities: 10%
+- Short-term Bonds: 10%
+
+Stock Bucket Breakdown (50% total)
+- QQQ (Nasdaq 100): 20% - core holding
+- SPY/VOO (S&P 500): 10%
+- BRK.B (Berkshire): 10%
+- IWM/VTWO (Russell 2000): 10%
+
+Rebalancing Framework (Three Gates)
+Gate 1: Hard Cap Risk Control (Highest Priority - triggers anytime)
+Purpose: Prevent trends from turning portfolio into one-sided bet.
+Trigger: Any asset class weight > hard cap
+Action: Immediately sell to upper band (or target if weekly price breaks below 10-week MA)
+
+Gate 2: Underweight Replenishment (Maintain all-weather structure)
+Trigger: Any asset class weight < lower band
+Action: Buy to restore to target weight
+
+Gate 3: Winner Pruning (Trend-friendly selling)
+Trigger (both conditions must be met):
+- Weight > upper band (overweight)
+- AND drawdown from recent peak >= drawdown threshold
+Action: Sell overweight portion back to target (or upper band)
+Key: Do NOT sell during uptrend just because overweight; wait for sufficient drawdown.
+
+Band Parameters
+Asset Class | Target | Lower Band | Upper Band | Hard Cap | Drawdown Threshold
+Stocks      | 50%    | 40%        | 60%        | 65%      | 10%
+Precious    | 15%    | 10%        | 20%        | 25%      | 8%
+BTC         | 15%    | 10%        | 20%        | 30%      | 25%
+Commodities | 10%    | 8%         | 12%        | 18%      | 15%
+Bonds       | 10%    | 5%         | 15%        | 15%      | 4%
+
+Execution Rules
+- Check frequency: Monthly (first trading day) for review; Quarterly (Jan/Apr/Jul/Oct) for mandatory review
+- Minimum trade threshold: Skip if trade amount < 0.5% of total portfolio
+- Use limit orders to reduce slippage
+- Avoid first 5-10 minutes after open and extreme volatility near close
+- For buys: Allocate to most underweight asset class first
+- For sells: Sell from most overweight asset class first
+
+Position Building Order (for new positions)
+1. Stocks (QQQ, SPY/VOO, IWM, BRK.B)
+2. Bonds
+3. Precious Metals
+4. Commodities
+5. BTC (highest volatility, handle last)
+
+Cash Flow Rules
+- New funds: Buy-only priority; invest in most underweight class until at target
+- Withdrawals: Sell from overweight classes first; if none, sell proportionally
+- Dividends: Add to cash, deploy at next check date to replenish underweight
+
+Drawdown Calculation
+For each asset class, maintain Peak_i (update monthly):
+- Peak_i = max(Peak_i, current price)
+- Drawdown: DD_i = 1 - (Current_Price / Peak_i)
+
+Prohibited Actions
+- Never liquidate an entire asset class based on market views
+- Never turn "drawdown pruning" into subjective judgment
+- Never frequently adjust thresholds (avoid discretionary timing)
+- Never use leverage (until complete leverage risk control system is established)
+
+Rationale Requirements
+- For each action: State which gate triggered, current vs target weight, and drawdown status
+- For no action (NOOP): Explain why no gates were triggered (all weights within bands, no drawdown threshold met)
+
+Summary
+Maintain disciplined all-weather structure through fixed allocations and rule-based rebalancing. Let winners run until drawdown triggers pruning. Always replenish underweight positions. Never make macro predictions or discretionary trades.

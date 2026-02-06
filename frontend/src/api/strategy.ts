@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { API_QUERY_KEYS } from "@/constants/api";
 import { type ApiResponse, apiClient } from "@/lib/api-client";
 import type {
+  AssetClass,
   CreateStrategy,
   PortfolioSummary,
   Position,
@@ -136,11 +137,15 @@ export const useDeleteStrategy = () => {
   });
 };
 
-export const useGetStrategyPrompts = () => {
+export const useGetStrategyPrompts = (assetClass?: AssetClass) => {
   return useQuery({
-    queryKey: API_QUERY_KEYS.STRATEGY.strategyPrompts,
-    queryFn: () =>
-      apiClient.get<ApiResponse<StrategyPrompt[]>>("/strategies/prompts"),
+    queryKey: [...API_QUERY_KEYS.STRATEGY.strategyPrompts, assetClass],
+    queryFn: () => {
+      const params = assetClass ? `?asset_class=${assetClass}` : "";
+      return apiClient.get<ApiResponse<StrategyPrompt[]>>(
+        `/strategies/prompts${params}`,
+      );
+    },
     select: (data) => data.data,
     staleTime: 0,
   });
@@ -150,7 +155,7 @@ export const useCreateStrategyPrompt = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: Pick<StrategyPrompt, "name" | "content">) =>
+    mutationFn: (data: Pick<StrategyPrompt, "name" | "content" | "asset_class">) =>
       apiClient.post<ApiResponse<StrategyPrompt>>(
         "/strategies/prompts/create",
         data,

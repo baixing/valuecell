@@ -23,6 +23,12 @@ class StrategyPrompt(Base):
     )
     name = Column(String(200), nullable=False, comment="Prompt name (display)")
     content = Column(Text, nullable=False, comment="Full prompt text")
+    asset_class = Column(
+        String(20),
+        nullable=False,
+        default="crypto",
+        comment="Asset class: crypto or stock",
+    )
 
     created_at = Column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
@@ -42,6 +48,7 @@ class StrategyPrompt(Base):
             "id": str(self.id),
             "name": self.name,
             "content": self.content,
+            "asset_class": self.asset_class,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }

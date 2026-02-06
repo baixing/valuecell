@@ -1,6 +1,7 @@
 // Strategy types
 
 export type TradingMode = "live" | "virtual" | "backtest";
+export type AssetClass = "crypto" | "stock";
 
 export interface Strategy {
   strategy_id: number;
@@ -78,6 +79,7 @@ export interface StrategyPrompt {
   id: string;
   name: string;
   content: string;
+  asset_class: AssetClass;
 }
 
 // Create Strategy types
@@ -93,6 +95,7 @@ export interface CreateStrategy {
   exchange_config: {
     exchange_id: string; // e.g. 'okx'
     trading_mode: TradingMode;
+    asset_class: AssetClass;
     api_key: string;
     secret_key: string;
     passphrase: string; // Required for some exchanges like OKX
@@ -128,6 +131,7 @@ export interface CopyStrategy {
   exchange_config: {
     exchange_id: string; // e.g. 'okx'
     trading_mode: TradingMode;
+    asset_class: AssetClass;
     api_key: string;
     secret_key: string;
     passphrase: string; // Required for some exchanges like OKX

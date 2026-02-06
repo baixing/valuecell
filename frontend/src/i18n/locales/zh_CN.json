@@ -262,7 +262,9 @@
       },
       "decideInterval": {
         "label": "决策间隔 (秒)",
-        "placeholder": "例如: 300"
+        "placeholder": "例如: 300",
+        "labelDays": "决策间隔 (天)",
+        "placeholderDays": "{{min}}-{{max}} 天"
       },
       "tradingSymbols": {
         "label": "交易对",
@@ -293,6 +295,9 @@
         "liveTrading": "实盘交易",
         "virtualTrading": "模拟交易",
         "backtesting": "回测",
+        "assetClass": "资产类别",
+        "cryptocurrency": "加密货币",
+        "usStocks": "美股",
         "selectExchange": "选择交易所",
         "walletAddress": "钱包地址",
         "privateKey": "私钥",
@@ -461,6 +466,8 @@
       "templateRequired": "请选择提示词模板",
       "decideIntervalMin": "决策间隔至少为10秒",
       "decideIntervalMax": "决策间隔不能超过3600秒",
+      "decideIntervalMinDays": "决策间隔至少为1天",
+      "decideIntervalMaxDays": "决策间隔不能超过60天",
       "backtestTimeRangeInvalid": "回测结束时间必须晚于开始时间"
     },
     "copy": {

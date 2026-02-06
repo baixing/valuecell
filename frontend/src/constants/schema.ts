@@ -1,6 +1,19 @@
 import type { TFunction } from "i18next";
 import { z } from "zod";
 
+import type { AssetClass } from "@/types/strategy";
+
+// Constants for decide_interval validation
+// Crypto: 10-3600 seconds (10s to 1 hour)
+// Stock: 1-60 days (converted to seconds: 86400 to 5184000)
+export const DECIDE_INTERVAL_LIMITS = {
+  crypto: { min: 10, max: 3600, unit: "seconds" as const },
+  stock: { min: 1, max: 60, unit: "days" as const },
+} as const;
+
+// Convert days to seconds for stock asset class
+export const SECONDS_PER_DAY = 86400;
+
 export const createAiModelSchema = (t: TFunction) =>
   z.object({
     provider: z.string().min(1, t("validation.aiModel.providerRequired")),
@@ -67,10 +80,29 @@ export const createExchangeSchema = (t: TFunction) =>
   ]);
 
 // Step 3 Schema: Trading Strategy
+// assetClass determines decide_interval validation:
+// - crypto: 10-3600 seconds
+// - stock: 1-60 days (stored as seconds internally)
 export const createTradingStrategySchema = (
   t: TFunction,
   tradingMode: "live" | "virtual" | "backtest" = "live",
+  assetClass: AssetClass = "crypto",
 ) => {
+  // Get limits based on asset class
+  const limits = DECIDE_INTERVAL_LIMITS[assetClass];
+  const isStock = assetClass === "stock";
+
+  // For stock: validate in days (1-60), for crypto: validate in seconds (10-3600)
+  const decideIntervalSchema = isStock
+    ? z
+        .number()
+        .min(limits.min, t("validation.trading.decideIntervalMinDays"))
+        .max(limits.max, t("validation.trading.decideIntervalMaxDays"))
+    : z
+        .number()
+        .min(limits.min, t("validation.trading.decideIntervalMin"))
+        .max(limits.max, t("validation.trading.decideIntervalMax"));
+
   const baseSchema = z.object({
     strategy_type: z.enum(["PromptBasedStrategy", "GridStrategy"]),
     strategy_name: z
@@ -85,10 +117,7 @@ export const createTradingStrategySchema = (
       .max(5, t("validation.trading.maxLeverageMax")),
     symbols: z.array(z.string()).min(1, t("validation.trading.symbolsMin")),
     template_id: z.string().min(1, t("validation.trading.templateRequired")),
-    decide_interval: z
-      .number()
-      .min(10, t("validation.trading.decideIntervalMin"))
-      .max(3600, t("validation.trading.decideIntervalMax")),
+    decide_interval: decideIntervalSchema,
     backtest_start_ts: z.number().optional(),
     backtest_end_ts: z.number().optional(),
   });
@@ -111,8 +140,27 @@ export const createTradingStrategySchema = (
   return baseSchema;
 };
 
-export const createCopyTradingStrategySchema = (t: TFunction) =>
-  z.object({
+// Copy strategy schema with asset class support
+export const createCopyTradingStrategySchema = (
+  t: TFunction,
+  assetClass: AssetClass = "crypto",
+) => {
+  // Get limits based on asset class
+  const limits = DECIDE_INTERVAL_LIMITS[assetClass];
+  const isStock = assetClass === "stock";
+
+  // For stock: validate in days (1-60), for crypto: validate in seconds (10-3600)
+  const decideIntervalSchema = isStock
+    ? z
+        .number()
+        .min(limits.min, t("validation.trading.decideIntervalMinDays"))
+        .max(limits.max, t("validation.trading.decideIntervalMaxDays"))
+    : z
+        .number()
+        .min(limits.min, t("validation.trading.decideIntervalMin"))
+        .max(limits.max, t("validation.trading.decideIntervalMax"));
+
+  return z.object({
     strategy_name: z
       .string()
       .min(1, t("validation.trading.strategyNameRequired")),
@@ -124,11 +172,9 @@ export const createCopyTradingStrategySchema = (t: TFunction) =>
       .min(1, t("validation.trading.maxLeverageMin"))
       .max(5, t("validation.trading.maxLeverageMax")),
     symbols: z.array(z.string()).min(1, t("validation.trading.symbolsMin")),
-    decide_interval: z
-      .number()
-      .min(10, t("validation.trading.decideIntervalMin"))
-      .max(3600, t("validation.trading.decideIntervalMax")),
+    decide_interval: decideIntervalSchema,
     strategy_type: z.enum(["PromptBasedStrategy", "GridStrategy"]),
     prompt_name: z.string().min(1, t("validation.copy.promptNameRequired")),
     prompt: z.string().min(1, t("validation.copy.promptRequired")),
   });
+};

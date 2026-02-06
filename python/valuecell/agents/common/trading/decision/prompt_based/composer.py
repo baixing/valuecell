@@ -11,6 +11,7 @@ from valuecell.utils import env as env_utils
 from valuecell.utils import model as model_utils
 
 from ...models import (
+    AssetClass,
     ComposeContext,
     ComposeResult,
     TradeDecisionAction,
@@ -24,7 +25,8 @@ from ...utils import (
     send_discord_message,
 )
 from ..interfaces import BaseComposer
-from .system_prompt import SYSTEM_PROMPT
+from .system_prompt import SYSTEM_PROMPT as CRYPTO_SYSTEM_PROMPT
+from .system_prompt_stock import STOCK_SYSTEM_PROMPT
 
 
 class LlmComposer(BaseComposer):
@@ -61,11 +63,18 @@ class LlmComposer(BaseComposer):
             model_id=cfg.model_id,
             api_key=cfg.api_key,
         )
+
+        # Select system prompt based on asset class
+        if request.exchange_config.asset_class == AssetClass.STOCK:
+            system_prompt = STOCK_SYSTEM_PROMPT
+        else:
+            system_prompt = CRYPTO_SYSTEM_PROMPT
+
         self.agent = AgnoAgent(
             model=self._model,
             output_schema=TradePlanProposal,
             markdown=False,
-            instructions=[SYSTEM_PROMPT],
+            instructions=[system_prompt],
             use_json_mode=model_utils.model_should_use_json_mode(self._model),
             debug_mode=env_utils.agent_debug_mode_enabled(),
         )
@@ -182,15 +191,27 @@ class LlmComposer(BaseComposer):
             }
         )
 
-        instructions = (
-            "Read Context and decide. "
-            "features.1m = structural trends (240 periods), features.1s = realtime signals (180 periods). "
-            "market.funding_rate: positive = longs pay shorts. "
-            "Respect constraints and risk_flags. Prefer NOOP when edge unclear. "
-            "Always include a concise top-level 'rationale'. "
-            "If you choose NOOP (items is empty), set 'rationale' to explain why: reference current prices and 'price.change_pct' vs thresholds, and any constraints or risk flags that led to NOOP. "
-            "Output JSON with items array."
-        )
+        # Build instructions based on asset class
+        is_stock = self._request.exchange_config.asset_class == AssetClass.STOCK
+        if is_stock:
+            instructions = (
+                "Read Context and decide. "
+                "features.1d = daily structural trends (240 trading days). "
+                "Respect constraints and risk_flags. Prefer NOOP when edge unclear. "
+                "Always include a concise top-level 'rationale'. "
+                "If you choose NOOP (items is empty), set 'rationale' to explain why: reference current prices and 'price.change_pct' vs thresholds, and any constraints or risk flags that led to NOOP. "
+                "Output JSON with items array."
+            )
+        else:
+            instructions = (
+                "Read Context and decide. "
+                "features.1m = structural trends (240 periods), features.1s = realtime signals (180 periods). "
+                "market.funding_rate: positive = longs pay shorts. "
+                "Respect constraints and risk_flags. Prefer NOOP when edge unclear. "
+                "Always include a concise top-level 'rationale'. "
+                "If you choose NOOP (items is empty), set 'rationale' to explain why: reference current prices and 'price.change_pct' vs thresholds, and any constraints or risk flags that led to NOOP. "
+                "Output JSON with items array."
+            )
 
         return f"{instructions}\n\nContext:\n{json.dumps(payload, ensure_ascii=False)}"
 

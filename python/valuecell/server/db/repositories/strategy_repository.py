@@ -531,15 +531,16 @@ class StrategyRepository:
                 session.close()
 
     # Prompts operations (kept under strategy namespace)
-    def list_prompts(self) -> List[StrategyPrompt]:
-        """Return all prompts ordered by updated_at desc."""
+    def list_prompts(
+        self, asset_class: Optional[str] = None
+    ) -> List[StrategyPrompt]:
+        """Return all prompts, optionally filtered by asset_class, ordered by updated_at desc."""
         session = self._get_session()
         try:
-            items = (
-                session.query(StrategyPrompt)
-                .order_by(StrategyPrompt.updated_at.desc())
-                .all()
-            )
+            query = session.query(StrategyPrompt)
+            if asset_class:
+                query = query.filter(StrategyPrompt.asset_class == asset_class)
+            items = query.order_by(StrategyPrompt.updated_at.desc()).all()
             for item in items:
                 session.expunge(item)
             return items
@@ -547,11 +548,13 @@ class StrategyRepository:
             if not self.db_session:
                 session.close()
 
-    def create_prompt(self, name: str, content: str) -> Optional[StrategyPrompt]:
+    def create_prompt(
+        self, name: str, content: str, asset_class: str = "crypto"
+    ) -> Optional[StrategyPrompt]:
         """Create a new prompt."""
         session = self._get_session()
         try:
-            item = StrategyPrompt(name=name, content=content)
+            item = StrategyPrompt(name=name, content=content, asset_class=asset_class)
             session.add(item)
             session.commit()
             session.refresh(item)

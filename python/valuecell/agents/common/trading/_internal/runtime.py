@@ -8,6 +8,7 @@ from valuecell.utils.ts import get_current_timestamp_ms
 from valuecell.utils.uuid import generate_uuid
 
 from ..data.backtest import BacktestDataSource
+from ..data.stock_backtest import StockBacktestDataSource
 from ..decision import BaseComposer, LlmComposer
 from ..execution import BaseExecutionGateway
 from ..execution.factory import create_execution_gateway
@@ -17,7 +18,7 @@ from ..history import (
     InMemoryHistoryRecorder,
     RollingDigestBuilder,
 )
-from ..models import Constraints, DecisionCycleResult, TradingMode, UserRequest
+from ..models import AssetClass, Constraints, DecisionCycleResult, TradingMode, UserRequest
 from ..portfolio.in_memory import InMemoryPortfolioService
 from ..utils import fetch_free_cash_from_gateway, fetch_positions_from_gateway
 from .coordinator import DefaultDecisionCoordinator
@@ -62,7 +63,9 @@ class StrategyRuntime:
     request: UserRequest
     strategy_id: str
     coordinator: DefaultDecisionCoordinator
-    backtest_data_source: Optional[BacktestDataSource] = field(default=None)
+    backtest_data_source: Optional[BacktestDataSource | StockBacktestDataSource] = field(
+        default=None
+    )
 
     def get_current_timestamp_ms(self) -> int:
         """Get current timestamp in milliseconds.
@@ -139,7 +142,7 @@ async def create_strategy_runtime(
     strategy_id = strategy_id_override or generate_uuid("strategy")
 
     # For backtest mode, create and preload the backtest data source
-    backtest_data_source: Optional[BacktestDataSource] = None
+    backtest_data_source: Optional[BacktestDataSource | StockBacktestDataSource] = None
     if request.exchange_config.trading_mode == TradingMode.BACKTEST:
         start_ts = request.trading_config.backtest_start_ts
         end_ts = request.trading_config.backtest_end_ts
@@ -150,22 +153,33 @@ async def create_strategy_runtime(
         if start_ts >= end_ts:
             raise ValueError("backtest_start_ts must be less than backtest_end_ts")
 
-        # Use okx as default exchange for historical data if not specified
-        exchange_id = request.exchange_config.exchange_id or "okx"
-        backtest_data_source = BacktestDataSource(
-            exchange_id=exchange_id,
-            symbols=request.trading_config.symbols,
-            start_ts=start_ts,
-            end_ts=end_ts,
-        )
-        # Preload historical data
+        is_stock = request.exchange_config.asset_class == AssetClass.STOCK
+
         logger.info(
             "Preloading backtest data for strategy_id={}, range={} to {}",
             strategy_id,
             start_ts,
             end_ts,
         )
-        await backtest_data_source.preload_data(intervals=["1m"])
+
+        if is_stock:
+            # US stock backtest uses YFinance data source with daily candles
+            backtest_data_source = StockBacktestDataSource(
+                symbols=request.trading_config.symbols,
+                start_ts=start_ts,
+                end_ts=end_ts,
+            )
+            await backtest_data_source.preload_data(intervals=["1d"])
+        else:
+            # Crypto backtest uses CCXT data source with 1-minute candles
+            exchange_id = request.exchange_config.exchange_id or "okx"
+            backtest_data_source = BacktestDataSource(
+                exchange_id=exchange_id,
+                symbols=request.trading_config.symbols,
+                start_ts=start_ts,
+                end_ts=end_ts,
+            )
+            await backtest_data_source.preload_data(intervals=["1m"])
 
     # If this is a resume of an existing strategy,
     # attempt to initialize from the persisted portfolio snapshot

@@ -10,6 +10,7 @@ from loguru import logger
 from sqlalchemy.orm import Session
 
 from valuecell.agents.common.trading.models import (
+    AssetClass,
     ExchangeConfig,
     StrategyStatus,
     StrategyStatusContent,
@@ -101,12 +102,18 @@ def create_strategy_agent_router() -> APIRouter:
                         msg="backtest_start_ts must be less than backtest_end_ts",
                     )
 
-                # Enforce maximum backtest duration (30 days in milliseconds)
-                max_duration_ms = 30 * 24 * 60 * 60 * 1000
+                # Enforce maximum backtest duration based on asset class
+                # Crypto: 30 days (1-minute candles via CCXT, data volume is large)
+                # Stock: 365 days (daily candles via YFinance, data volume is small)
+                is_stock = (
+                    request.exchange_config.asset_class == AssetClass.STOCK
+                )
+                max_duration_days = 365 if is_stock else 30
+                max_duration_ms = max_duration_days * 24 * 60 * 60 * 1000
                 if (end_ts - start_ts) > max_duration_ms:
                     return ErrorResponse.create(
                         code=StatusCode.BAD_REQUEST,
-                        msg="Backtest duration cannot exceed 30 days",
+                        msg=f"Backtest duration cannot exceed {max_duration_days} days",
                     )
 
                 logger.info(

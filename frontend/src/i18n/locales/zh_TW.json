@@ -260,7 +260,9 @@
       },
       "decideInterval": {
         "label": "決策間隔 (秒)",
-        "placeholder": "例如: 300"
+        "placeholder": "例如: 300",
+        "labelDays": "決策間隔 (天)",
+        "placeholderDays": "{{min}}-{{max}} 天"
       },
       "tradingSymbols": {
         "label": "交易對",
@@ -286,6 +288,10 @@
         "transactionType": "交易類型",
         "liveTrading": "實盤交易",
         "virtualTrading": "模擬交易",
+        "backtesting": "回測",
+        "assetClass": "資產類別",
+        "cryptocurrency": "加密貨幣",
+        "usStocks": "美股",
         "selectExchange": "選擇交易所",
         "walletAddress": "錢包地址",
         "privateKey": "私鑰",
